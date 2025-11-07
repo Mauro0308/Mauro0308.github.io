@@ -1,0 +1,224 @@
+I"z-<p>Vamos a trabajar con una máquina de <strong>Dockerlabs</strong> en la que aprenderemos a utilizar la herramienta <strong>Hydra</strong> para realizar un ataque de <strong>fuerza bruta sobre el servicio SSH</strong>, con el objetivo de <strong>comprometer y tomar control de la máquina víctima</strong>.</p>
+
+<p><img src="image-2.png" alt="alt text" /></p>
+
+<hr />
+
+<p>Empezaremos haciendo un escaneo de puertos a la maquina <strong>Trust</strong> con la herramienta <strong>Nmap</strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code> sudo nmap -p- --open -sSCV --min-rate 5000 -Pn -n -v 172.18.0.2 -oN escaneo
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Parte</th>
+      <th>Significado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sudo</code></td>
+      <td>Se necesita privilegios de administrador para algunos tipos de escaneo (como los de tipo SYN).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nmap</code></td>
+      <td>Herramienta para escaneo de redes y puertos.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-p-</code></td>
+      <td>Escanea <strong>todos los puertos</strong> (del 1 al 65535).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--open</code></td>
+      <td>Muestra <strong>solo los puertos abiertos</strong>, omite los cerrados y filtrados.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-sSCV</code></td>
+      <td>Combinación de opciones:  <br />• <code class="language-plaintext highlighter-rouge">-sS</code> = Escaneo <strong>SYN</strong> (rápido y sigiloso).  <br />• <code class="language-plaintext highlighter-rouge">-sC</code> = Usa <strong>scripts NSE básicos</strong>, equivalente a <code class="language-plaintext highlighter-rouge">--script=default</code>.  <br />• <code class="language-plaintext highlighter-rouge">-sV</code> = Detecta versiones de servicios.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--min-rate 5000</code></td>
+      <td>Intenta enviar <strong>al menos 5000 paquetes por segundo</strong> (muy rápido). ⚠️ Puede generar falsos positivos si la red no lo soporta bien.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-Pn</code></td>
+      <td>No hace <strong>ping previo</strong> al host (asume que está vivo). Útil si ICMP está bloqueado.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-n</code></td>
+      <td>No resuelve nombres DNS (más rápido).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-v</code></td>
+      <td>Modo <strong>verborreico</strong>: muestra más detalles durante el escaneo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">172.18.0.2</code></td>
+      <td>IP del objetivo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-oN escaneo</code></td>
+      <td>Guarda el resultado en un archivo llamado <code class="language-plaintext highlighter-rouge">escaneo</code> en formato <strong>legible para humanos</strong> (normal output).</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>El escaneo nos muestra que esta maquina tiene 2 puertos abiertos.</p>
+
+<ul>
+  <li>Puerto 22 SSH en la versión <strong>9.2</strong></li>
+  <li>Puerto 80 donde esta corriendo un servicio <strong>Http</strong></li>
+</ul>
+
+<p><img src="image-3.png" alt="alt text" /></p>
+
+<p>Revisaremos inmediatamente la pagina que esta corriendo por el puerto 80 sin antes asignarle un dominio local para mayor comodidad. Este dominio se llamara <strong>victima.in</strong></p>
+
+<p><img src="image-4.png" alt="alt text" /></p>
+
+<p>Al revisar la pagina vemos la clásica pagina de apache. Nada fuera de lo normal. También inspeccionemos el código fuente de la pagina no logramos hallar nada interesante.</p>
+
+<p><img src="image-5.png" alt="alt text" /></p>
+
+<p>Usare la herramienta <strong>Gobuster</strong> para hacer <strong>fuzzing</strong> para tratar de buscar directorios ocultos en la pagina. Para esto usare el siguiente comando:</p>
+
+<p><code class="language-plaintext highlighter-rouge">gobuster dir -u http://172.18.0.2 -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt</code></p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Parte</th>
+      <th>Significado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">gobuster</code></td>
+      <td>Es una herramienta para hacer <strong>fuzzing</strong> (fuerza bruta) de directorios, subdominios, etc. en servidores web.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">dir</code></td>
+      <td>Modo de operación: <strong>escaneo de directorios y archivos web</strong>.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-u http://172.18.0.2</code></td>
+      <td>URL del objetivo: se va a escanear ese servidor buscando rutas ocultas.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt</code></td>
+      <td>Ruta del <strong>diccionario de palabras</strong> que se usará para probar directorios y archivos comunes (como <code class="language-plaintext highlighter-rouge">/admin</code>, <code class="language-plaintext highlighter-rouge">/login</code>, <code class="language-plaintext highlighter-rouge">/uploads</code>, etc).</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>No se encontró nada interesante, solo la típica pagina de <strong>server status</strong>. Dado esto usaremos el mismo comando pero con la diferencia que le vamos a especificar los archivos de interés que quiero que se centre en buscar</p>
+
+<p><img src="image-6.png" alt="alt text" /></p>
+
+<p>Usaremos el comando:</p>
+
+<p><code class="language-plaintext highlighter-rouge">gobuster dir -u http://172.18.0.2 -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -x php,txt,sh</code></p>
+
+<p>Lo único que se agrego fue <code class="language-plaintext highlighter-rouge">-x php,txt,sh</code> para que se centre en buscar archivos con extensiones .php, txt y sh.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Parte</th>
+      <th>Descripción</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-x php,txt,sh</code></td>
+      <td><strong>Extensiones de archivos</strong> que se agregarán a cada palabra del diccionario. Probará cosas como:• <code class="language-plaintext highlighter-rouge">/admin.php</code>• <code class="language-plaintext highlighter-rouge">/login.txt</code>• <code class="language-plaintext highlighter-rouge">/config.sh</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Ahora encontró muchos mas directorios ocultos entre los cuales llama uno poderosamente la atención que es <strong>secret.php</strong></p>
+
+<p><img src="image-7.png" alt="alt text" /></p>
+
+<p>Al entrar al directorio <strong>secret.php</strong> nos muestra la siguiente pagina, donde podríamos tener un posible usuario llamado <strong>Mario</strong>.</p>
+
+<p><img src="image-8.png" alt="alt text" /></p>
+
+<p>En el escaneo de <strong>Nmap</strong> se había visto que estaba abierto el puerto <strong>22 SSH</strong>. Lo que se podría hacer de aquí en adelante seria hacer <strong>fuerza bruta</strong> con la herramienta hydra, ya que  tendríamos un posible usuario llamado <strong>Mario</strong>.</p>
+
+<h2 id="que-es-ataque-de-fuerza-bruta">Que es ataque de fuerza bruta?</h2>
+
+<p>En ciberseguridad, un ataque de <strong>fuerza bruta</strong> es una técnica en la que un atacante <strong>prueba todas las combinaciones posibles</strong> de credenciales (usuario/contraseña) o claves, hasta encontrar la correcta y obtener acceso no autorizado a un sistema.</p>
+
+<h3 id="️-cómo-funciona">⚔️ ¿Cómo funciona?</h3>
+
+<p>El atacante usa un <strong>script o herramienta automatizada</strong> que prueba miles o millones de combinaciones rápidamente, por ejemplo:</p>
+
+<p><code class="language-plaintext highlighter-rouge">admin:123456</code>
+<code class="language-plaintext highlighter-rouge">admin:password</code>
+<code class="language-plaintext highlighter-rouge">admin:qwerty</code>
+<code class="language-plaintext highlighter-rouge">admin:admin123</code>
+<code class="language-plaintext highlighter-rouge">...</code></p>
+
+<p>Usaremos la herramienta hydra para hacer fuerza bruta mediante el <strong>puerto 22 SSH</strong> usando como usuario <strong>mario</strong>. Para ello usaremos el siguiente comando:</p>
+
+<p><code class="language-plaintext highlighter-rouge">hydra -l mario -P /usr/share/wordlists/rockyou.txt ssh://172.18.0.2</code></p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Opción</th>
+      <th>Significado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">hydra</code></td>
+      <td>Herramienta de fuerza bruta rápida y flexible, usada para romper contraseñas en servicios remotos.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-l mario</code></td>
+      <td>Nombre de <strong>usuario fijo</strong> que se va a probar (<code class="language-plaintext highlighter-rouge">mario</code>).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-P /usr/share/wordlists/rockyou.txt</code></td>
+      <td>Ruta al <strong>diccionario de contraseñas</strong>. Se probarán todas esas contraseñas con el usuario <code class="language-plaintext highlighter-rouge">mario</code>.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">ssh://172.18.0.2</code></td>
+      <td>Protocolo y <strong>dirección IP del objetivo</strong>, en este caso SSH. Hydra sabrá que debe conectarse al puerto 22 por defecto.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Se encontró una posible contraseña <strong>chocolate</strong> que pertenece al usuario <strong>mario</strong></p>
+
+<p><img src="image-9.png" alt="alt text" /></p>
+
+<p>Ahora que tenemos un usuario y una contraseña probaremos mediante el puerto de conexión 22 SSH estas credenciales.</p>
+
+<p>Estamos dentro de la maquina como el usuario <strong>mario</strong>. Ahora revisaremos para ver si existe algo de interés para apoderarnos de la maquina.</p>
+
+<p><img src="image-10.png" alt="alt text" /></p>
+
+<p>Probamos el comando <code class="language-plaintext highlighter-rouge">sudo -l</code></p>
+
+<h3 id="-qué-hace">🧩 ¿Qué hace?</h3>
+
+<p>🔍 <strong>Muestra los comandos que el usuario actual puede ejecutar con <code class="language-plaintext highlighter-rouge">sudo</code> sin necesidad de contraseña</strong> (o con su contraseña, si ya la ingresó antes).</p>
+
+<p>Podemos ver que el usuario <strong>mario</strong>  puede ejecutar <strong>vim</strong>.</p>
+
+<p><img src="image-11.png" alt="alt text" /></p>
+
+<p>Buscamos en la pagina https://gtfobins.github.io/gtfobins/vim/ y nos dice que con <strong>vim</strong> podemos salir de una shell restringida.
+Para ello abriremos vim en la maquina victima y pondremos el siguiente código:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>vim -c ':!/bin/sh'
+</code></pre></div></div>
+
+<p>somos <strong>root</strong> nos hemos apoderado totalmente de la maquina.</p>
+
+<p><img src="image-12.png" alt="alt text" /></p>
+:ET

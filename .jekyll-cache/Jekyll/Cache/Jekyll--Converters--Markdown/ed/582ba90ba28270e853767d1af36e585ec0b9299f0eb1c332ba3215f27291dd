@@ -1,0 +1,2 @@
+I":<p>En esta práctica trabajaremos con una máquina de DockerLabs en la que explotaremos una vulnerabilidad de <em>Local File Inclusion (LFI)</em>. Gracias a esta falla obtendremos diferentes ventajas que nos permitirán avanzar en el proceso de explotación y, finalmente, apoderarnos de la máquina víctima.</p>
+:ET

@@ -1,0 +1,167 @@
+I"7"<p>En esta práctica resolveremos una máquina de <strong>DockerLabs</strong> enfocada en la explotación del servicio <strong>SSH (puerto 22)</strong> mediante un ataque de <strong>fuerza bruta</strong>. A lo largo del proceso iremos encontrando distintas <strong>pistas</strong> que nos guiarán hacia la solución, incluyendo la necesidad de <strong>invertir y formatear un diccionario</strong> para utilizarlo de forma efectiva y así lograr vulnerar la máquina.</p>
+
+<p><img src="image.png" alt="alt text" /></p>
+
+<p>Empezaremos haciendo un escaneo de puertos a la maquina <strong>Hedgehog</strong> con la herramienta <strong>Nmap</strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code> sudo nmap -p- --open -sSCV --min-rate 5000 -Pn -n -v 172.17.0.2 -oN escaneo
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Parte</th>
+      <th>Significado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sudo</code></td>
+      <td>Se necesita privilegios de administrador para algunos tipos de escaneo (como los de tipo SYN).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nmap</code></td>
+      <td>Herramienta para escaneo de redes y puertos.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-p-</code></td>
+      <td>Escanea <strong>todos los puertos</strong> (del 1 al 65535).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--open</code></td>
+      <td>Muestra <strong>solo los puertos abiertos</strong>, omite los cerrados y filtrados.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-sSCV</code></td>
+      <td>Combinación de opciones:  <br />• <code class="language-plaintext highlighter-rouge">-sS</code> = Escaneo <strong>SYN</strong> (rápido y sigiloso).  <br />• <code class="language-plaintext highlighter-rouge">-sC</code> = Usa <strong>scripts NSE básicos</strong>, equivalente a <code class="language-plaintext highlighter-rouge">--script=default</code>.  <br />• <code class="language-plaintext highlighter-rouge">-sV</code> = Detecta versiones de servicios.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--min-rate 5000</code></td>
+      <td>Intenta enviar <strong>al menos 5000 paquetes por segundo</strong> (muy rápido). ⚠️ Puede generar falsos positivos si la red no lo soporta bien.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-Pn</code></td>
+      <td>No hace <strong>ping previo</strong> al host (asume que está vivo). Útil si ICMP está bloqueado.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-n</code></td>
+      <td>No resuelve nombres DNS (más rápido).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-v</code></td>
+      <td>Modo <strong>verborreico</strong>: muestra más detalles durante el escaneo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">172.17.0.2</code></td>
+      <td>IP del objetivo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-oN escaneo</code></td>
+      <td>Guarda el resultado en un archivo llamado <code class="language-plaintext highlighter-rouge">escaneo</code> en formato <strong>legible para humanos</strong> (normal output).</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>El escaneo nos muestra que esta maquina tiene 2 puerto abierto.</p>
+
+<ul>
+  <li>puerto 22 ssh version 9.6</li>
+  <li>puerto 80 http</li>
+</ul>
+
+<p><img src="image-1.png" alt="alt text" /></p>
+
+<p>Revisaremos que esta corriendo por el puerto 80. una pagina el mensaje <strong>tails</strong> cola(s) en ingles. También revise el código fuente de la pagina pero no se encontró nada raro</p>
+
+<p><img src="image-2.png" alt="alt text" /></p>
+
+<p>Realizare un fuzzing con la herramienta gobuster para ver si la pagina esconde directorios ocultos y le especificaremos que busque archivos <strong>.php, .txt y .sh.</strong> Para ello usaremos el siguiente comando:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>gobuster dir -u http://172.17.0.2 -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -x php,txt,sh`
+</code></pre></div></div>
+
+<p>Lamentablemente no se encontró nada. Anteriormente habíamos encontrado la frase <strong>tails</strong> podría ser el nombre de algún usuario, ademas de tener el puerto 22 ssh abierto por lo cual podríamos intentar hacer fuerza bruta con hydra y ver si existe alguna password para ese usuario</p>
+
+<p><img src="image-3.png" alt="alt text" /></p>
+
+<p>Usaremos la herramienta <strong>hydra</strong> para hacer fuerza bruta. Para eso usaremos el siguiente comando:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>hydra -l tails -P /usr/share/wordlists/rockyou.txt ssh://172.17.0.2
+</code></pre></div></div>
+
+<p>Ha pasado un tiempo haciendo la búsqueda con <strong>hydra</strong> pero sin resultados.. Investigando un poco aparte de que el significado de <strong>tails</strong> es cola también tiene como significado extremo o final de algo… lo que llega uno a sacar como conclusión que la password tiene que estar al final de la wordlist rockyou por lo que deberemos invertir el diccionario, para probar suerte nuevamente con <strong>hydra</strong></p>
+
+<p><img src="image-4.png" alt="alt text" /></p>
+
+<p>Para eso usaremos el siguiente comando para crear un diccionario nuevo llamado <strong>invertido.txt</strong> que sera lo mismo que el diccionario rockyou pero al revés</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>tac rockyou.txt &gt;&gt; invertir.txt
+</code></pre></div></div>
+
+<p>Luego eliminaremos los espacios que quedan dentro del diccionario nuevo. para ello usaremos este comando:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sed -i 's/ //g' invertido.txt
+</code></pre></div></div>
+
+<p>Ahora con el diccionario nuevo y formateado haremos nuevamente el ataque con <strong>hydra</strong> con el siguiente comando:</p>
+
+<p>Asegurar de cambiar el diccionario rockyou por el nuevo diccionario <strong>invertido.txt</strong></p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>hydra -l tails -P /usr/share/wordlists/invertido.txt ssh://172.17.0.2
+</code></pre></div></div>
+
+<p>Esta vez si se pudo encontrar la password del usuario <strong>tails</strong></p>
+
+<ul>
+  <li><strong>user: tails</strong></li>
+  <li><strong>password: 3117548331</strong></li>
+</ul>
+
+<p><img src="image-5.png" alt="alt text" /></p>
+
+<p>Estamos dentro de la maquina victima siendo el usuario <strong>tails</strong></p>
+
+<p><img src="image-6.png" alt="alt text" /></p>
+
+<p>Probaremos el comando <code class="language-plaintext highlighter-rouge">sudo -l</code> el cual nos dirá si hay binarios vulnerables. Nos dice que hay un usuario (sonic) con mas privilegios que podríamos escalar.</p>
+
+<p><img src="image-7.png" alt="alt text" /></p>
+
+<p>Entonces usaremos el truco de <code class="language-plaintext highlighter-rouge">/bin/bash</code> este comando sirve para abrir una terminal (shell) como si fuera el usuario sonic en este caso. Para ello usamos el comando:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo -u sonic /bin/bash
+</code></pre></div></div>
+
+<p><img src="image-8.png" alt="alt text" /></p>
+
+<p>Ahora usaremos el mismo comando pero  para ser <strong>root</strong>. Para ello usamos el comando:</p>
+
+<p><code class="language-plaintext highlighter-rouge">sudo -u root /bin/bash</code></p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Parte del comando</th>
+      <th>Significado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sudo</code></td>
+      <td>Ejecuta un comando con privilegios elevados</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-u root</code></td>
+      <td>Especifica que se ejecute como el usuario <code class="language-plaintext highlighter-rouge">root</code> (no como tu usuario normal)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">/bin/bash</code></td>
+      <td>Es la shell que se va a abrir, una sesión de bash</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Logramos ser <strong>root</strong></p>
+
+<p><img src="image-9.png" alt="alt text" /></p>
+
+:ET

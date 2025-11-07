@@ -1,0 +1,150 @@
+I"�<p>En esta práctica resolveremos una máquina de DockerLabs en la que analizaremos la vulnerabilidad <em>CVE-2011-2523</em>, un <em>backdoor</em> que aprovecharemos utilizando la herramienta <em>Metasploit</em> para explotarla y tomar control de la máquina víctima.</p>
+
+<p><img src="image.png" alt="alt text" /></p>
+
+<p>Empezaremos haciendo un escaneo de puertos a la maquina <strong>Tproot</strong> con la herramienta <strong>Nmap</strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code> sudo nmap -p- --open -sSCV --min-rate 5000 -Pn -n -v 172.17.0.2 -oN escaneo
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Parte</th>
+      <th>Significado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sudo</code></td>
+      <td>Se necesita privilegios de administrador para algunos tipos de escaneo (como los de tipo SYN).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nmap</code></td>
+      <td>Herramienta para escaneo de redes y puertos.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-p-</code></td>
+      <td>Escanea <strong>todos los puertos</strong> (del 1 al 65535).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--open</code></td>
+      <td>Muestra <strong>solo los puertos abiertos</strong>, omite los cerrados y filtrados.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-sSCV</code></td>
+      <td>Combinación de opciones:  <br />• <code class="language-plaintext highlighter-rouge">-sS</code> = Escaneo <strong>SYN</strong> (rápido y sigiloso).  <br />• <code class="language-plaintext highlighter-rouge">-sC</code> = Usa <strong>scripts NSE básicos</strong>, equivalente a <code class="language-plaintext highlighter-rouge">--script=default</code>.  <br />• <code class="language-plaintext highlighter-rouge">-sV</code> = Detecta versiones de servicios.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--min-rate 5000</code></td>
+      <td>Intenta enviar <strong>al menos 5000 paquetes por segundo</strong> (muy rápido). ⚠️ Puede generar falsos positivos si la red no lo soporta bien.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-Pn</code></td>
+      <td>No hace <strong>ping previo</strong> al host (asume que está vivo). Útil si ICMP está bloqueado.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-n</code></td>
+      <td>No resuelve nombres DNS (más rápido).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-v</code></td>
+      <td>Modo <strong>verborreico</strong>: muestra más detalles durante el escaneo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">172.17.0.2</code></td>
+      <td>IP del objetivo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-oN escaneo</code></td>
+      <td>Guarda el resultado en un archivo llamado <code class="language-plaintext highlighter-rouge">escaneo</code> en formato <strong>legible para humanos</strong> (normal output).</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>El escaneo nos muestra que esta maquina tiene 2 puerto abierto.</p>
+
+<ul>
+  <li>puerto 21 FTP versión  vsftpd 2.3.4 con una vulnerabilidad perteneciente al <strong>CVE - 2011-2523</strong></li>
+  <li>puerto 80 http</li>
+</ul>
+
+<p><img src="image-1.png" alt="alt text" /></p>
+
+<p>Revisaremos el puerto 80 para ver que esta corriendo. Es una pagina de apache.</p>
+
+<p><img src="image-2.png" alt="alt text" /></p>
+
+<p>Usaremos la herramienta <strong>gobuster</strong> para ver si esta pagina contiene directorios ocultos. Para ello usaremos el siguiente comando:</p>
+
+<p><code class="language-plaintext highlighter-rouge">gobuster dir -u http://172.17.0.2 -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -x php,txt,sh</code></p>
+
+<p>No encontró nada.</p>
+
+<p><img src="image-3.png" alt="alt text" /></p>
+
+<p>Entonces trabajaremos con el puerto 21 aprovechando su vulnerabilidad <strong>CVE - 2011-2523</strong> de un ataque de <strong>backdoor</strong>. Para ello usaremos la herramienta <strong>metasploit</strong></p>
+
+<h2 id="que-es-metasploit">Que es metasploit?</h2>
+
+<p><strong>Metasploit Framework</strong> es una <strong>plataforma de explotación</strong> que permite:</p>
+
+<p>✅ Buscar vulnerabilidades<br />
+✅ Desarrollar y lanzar exploits<br />
+✅ Crear cargas maliciosas (payloads)<br />
+✅ Obtener acceso remoto (shells)<br />
+✅ Post-explotación (escalar privilegios, etc.)</p>
+
+<h2 id="para-qué-se-usa">¿Para qué se usa?</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Función</th>
+      <th>Descripción breve</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>🔍 Escaneo y reconocimiento</td>
+      <td>Buscar información del sistema objetivo</td>
+    </tr>
+    <tr>
+      <td>🎯 Explotación</td>
+      <td>Usar vulnerabilidades conocidas para obtener acceso</td>
+    </tr>
+    <tr>
+      <td>📦 Payloads</td>
+      <td>Cargas útiles para ganar control: shells, meterpreter, etc.</td>
+    </tr>
+    <tr>
+      <td>📡 Módulos auxiliares</td>
+      <td>Ataques sin explotación: fuerza bruta, escaneo SMB, sniffers…</td>
+    </tr>
+    <tr>
+      <td>🧽 Limpieza</td>
+      <td>Borrar rastros, mantener acceso, etc.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Dicho esto usamos el siguiente comando para abrir metasploit <code class="language-plaintext highlighter-rouge">msfconsole</code>. Luego escribimos el siguiente comando: <code class="language-plaintext highlighter-rouge">search vsftpd 2.3.4</code> lo cual nos buscara un exploit que sea para explotar esta vulnerabilidad. En este caso nos encontró un exploit para realizar un <strong>backdoor</strong>.</p>
+
+<p><img src="image-4.png" alt="alt text" /></p>
+
+<p>Escribimos el siguiente comando <code class="language-plaintext highlighter-rouge">use 0</code> para poder hacer uso del exploit. Luego se nos cargara el exploit para poder empezar a configurar el <strong>payload</strong> para ello ponemos el comando <code class="language-plaintext highlighter-rouge">options</code> para que nos muestre que tenemos que configurar para hacer funcionar el exploit. En este caso solo nos pide configurar el <strong>RHOSTS</strong> para poder hacerlo funcionar.</p>
+
+<p><img src="image-5.png" alt="alt text" /></p>
+
+<p>Para configurar el RHOSTS pondremos el siguiente comando: <code class="language-plaintext highlighter-rouge">set rhosts 172.17.0.2</code> con esto tendremos listo la configuración del exploit.</p>
+
+<p><img src="image-6.png" alt="alt text" /></p>
+
+<p>Para hacerlo correr solo debemos poner el comando <strong>exploit</strong> y esperar a que termine de cargar el exploit. Una vez terminado veremos que ya somos <strong>root</strong> dentro de la maquina victima.</p>
+
+<p><img src="image-7.png" alt="alt text" /></p>
+
+<p>CTF?? jaja</p>
+
+<p><img src="image-8.png" alt="alt text" /></p>
+:ET

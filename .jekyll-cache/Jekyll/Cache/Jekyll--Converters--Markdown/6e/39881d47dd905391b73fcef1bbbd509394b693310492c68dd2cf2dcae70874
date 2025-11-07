@@ -1,0 +1,163 @@
+I"�<p>En este laboratorio exploraremos una máquina de DockerLabs con una vulnerabilidad en el puerto 21. Aprovecharemos esta falla para introducir un <strong><em>backdoor</em></strong> y obtener acceso privilegiado como <em>root</em>, empleando una herramienta extraída de un repositorio en GitHub.</p>
+
+<p><img src="image.png" alt="alt text" /></p>
+
+<p>Empezaremos haciendo un escaneo de puertos a la maquina <strong>FirstHacking</strong> con la herramienta <strong>Nmap</strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code> sudo nmap -p- --open -sSCV --min-rate 5000 -Pn -n -v 172.17.0.2 -oN escaneo
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Parte</th>
+      <th>Significado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sudo</code></td>
+      <td>Se necesita privilegios de administrador para algunos tipos de escaneo (como los de tipo SYN).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nmap</code></td>
+      <td>Herramienta para escaneo de redes y puertos.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-p-</code></td>
+      <td>Escanea <strong>todos los puertos</strong> (del 1 al 65535).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--open</code></td>
+      <td>Muestra <strong>solo los puertos abiertos</strong>, omite los cerrados y filtrados.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-sSCV</code></td>
+      <td>Combinación de opciones:  <br />• <code class="language-plaintext highlighter-rouge">-sS</code> = Escaneo <strong>SYN</strong> (rápido y sigiloso).  <br />• <code class="language-plaintext highlighter-rouge">-sC</code> = Usa <strong>scripts NSE básicos</strong>, equivalente a <code class="language-plaintext highlighter-rouge">--script=default</code>.  <br />• <code class="language-plaintext highlighter-rouge">-sV</code> = Detecta versiones de servicios.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--min-rate 5000</code></td>
+      <td>Intenta enviar <strong>al menos 5000 paquetes por segundo</strong> (muy rápido). ⚠️ Puede generar falsos positivos si la red no lo soporta bien.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-Pn</code></td>
+      <td>No hace <strong>ping previo</strong> al host (asume que está vivo). Útil si ICMP está bloqueado.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-n</code></td>
+      <td>No resuelve nombres DNS (más rápido).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-v</code></td>
+      <td>Modo <strong>verborreico</strong>: muestra más detalles durante el escaneo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">172.17.0.2</code></td>
+      <td>IP del objetivo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-oN escaneo</code></td>
+      <td>Guarda el resultado en un archivo llamado <code class="language-plaintext highlighter-rouge">escaneo</code> en formato <strong>legible para humanos</strong> (normal output).</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>El escaneo nos muestra que esta maquina tiene 1 puerto abierto.</p>
+
+<ul>
+  <li>puerto 21 FTP <strong>vsftpd 2.3.4</strong></li>
+</ul>
+
+<p><img src="image-1.png" alt="alt text" /></p>
+
+<p>El puerto FTP 21 es el puerto estándar de control y comando para el Protocolo de Transferencia de Archivos (FTP). Se utiliza para establecer la conexión entre un cliente FTP y un servidor FTP. El puerto 20, por otro lado, se utiliza para la transferencia de datos. </p>
+
+<p>El Puerto 21 en detalle:</p>
+
+<p><strong>Función:</strong></p>
+
+<p>El puerto 21 es el puerto de control y comando para FTP, a través del cual el cliente envía comandos al servidor y el servidor responde. </p>
+
+<p><strong>Conexión:</strong></p>
+
+<p>Para conectarse a un servidor FTP, el cliente debe establecer una conexión de control en el puerto 21. </p>
+
+<p><strong>Transferencia de datos:</strong></p>
+
+<p>Después de establecer la conexión de control en el puerto 21, se utiliza el puerto 20 para la transferencia de datos entre el cliente y el servidor.</p>
+
+<p>Dicho esto al tener el puerto 21 una versión 2.3.4 se puede hacer un <strong>backdoor</strong>. Esta vulnerabilidad es la  <strong>CVE-2011-2523</strong></p>
+
+<h2 id="que-es-un-backdoor">Que es un backdoor?</h2>
+
+<p>Un <strong>backdoor</strong> es una forma de obtener acceso oculto o no autorizado a un sistema, <em>saltándose la autenticación o los controles normales</em>. Puede ser:</p>
+
+<p>🛠️ Instalado por un atacante.</p>
+
+<p>👨‍💻 Dejado intencionalmente por un desarrollador.</p>
+
+<p>🧬 Inyectado mediante una vulnerabilidad.</p>
+
+<p>Descargaremos este repositorio de github donde contiene el exploit para vulnerar el sistema.</p>
+
+<p><img src="image-2.png" alt="alt text" /></p>
+
+<p>Uno de los requerimientos para usar este exploit es instalar <strong>pwntools</strong>. Pwntools es una librería de Python muy usada para escribir exploits. El problema es que se instala con pip lo cual esto kali linux no deja hacerlo.</p>
+
+<p><img src="image-3.png" alt="alt text" /></p>
+
+<p>Recomiendo crear un entorno virtual con Python para instalar la librería</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python3 -m venv ~/venvs/pwnenv
+</code></pre></div></div>
+
+<p>con este comando activas el entorno virtual. Una vez activado puedes empezar a instalar la librería <strong>pwntools</strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>source ~/venvs/pwnenv/bin/activate
+</code></pre></div></div>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pip install pwntools
+</code></pre></div></div>
+
+<p>Ya descargado el archivo lo ejecutamos con el siguiente comando:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python3 exploit.py 172.17.0.2 21
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Parte del comando</th>
+      <th>Explicación</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">python3</code></td>
+      <td>Ejecuta el script usando Python 3.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">exploit.py</code></td>
+      <td>Es el script que estás ejecutando. Contiene el código del exploit.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">172.17.0.2</code></td>
+      <td>Es la <strong>dirección IP</strong> de la víctima (una máquina o contenedor con FTP).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">21</code></td>
+      <td>Es el <strong>puerto objetivo</strong>, en este caso el puerto del servicio FTP.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Ya ejecutado veremos que somos <strong>root</strong> en la maquina victima.</p>
+
+<p><img src="image-4.png" alt="alt text" /></p>
+
+<p>PD: para desactivar el entorno virtual de Python usar este comando:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>deactivate
+</code></pre></div></div>
+
+:ET

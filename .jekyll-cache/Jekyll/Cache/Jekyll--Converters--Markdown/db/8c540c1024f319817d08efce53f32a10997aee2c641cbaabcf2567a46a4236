@@ -1,0 +1,2 @@
+I"�<p>En esta práctica resolveremos una máquina de <strong>DockerLabs</strong> en la que aplicaremos técnicas de <strong>esteganografía</strong> para descubrir <strong>datos ocultos dentro de una imagen</strong>. Dichos datos, presentes en los <strong>metadatos del archivo</strong>, nos proporcionarán la información necesaria para avanzar en el análisis y finalmente <strong>vulnerar la máquina</strong>.</p>
+:ET

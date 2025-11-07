@@ -1,0 +1,172 @@
+I"� <p>Vamos a resolver una máquina de la plataforma Dockerlabs llamada <strong>“Injection”</strong>. En este laboratorio, exploraremos cómo una <strong>inyección SQL</strong> puede ser utilizada para vulnerar el sistema y, posteriormente, <strong>tomar el control de la máquina</strong></p>
+
+<p><img src="image-13.png" alt="alt text" /></p>
+
+<hr />
+<p>Empezaremos haciendo un escaneo de puertos a la maquina <strong>Injection</strong> con la herramienta <strong>Nmap</strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code> sudo nmap -p- --open -sSCV --min-rate 5000 -Pn -n -v 172.17.0.2 -oN escaneo
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Parte</th>
+      <th>Significado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sudo</code></td>
+      <td>Se necesita privilegios de administrador para algunos tipos de escaneo (como los de tipo SYN).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nmap</code></td>
+      <td>Herramienta para escaneo de redes y puertos.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-p-</code></td>
+      <td>Escanea <strong>todos los puertos</strong> (del 1 al 65535).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--open</code></td>
+      <td>Muestra <strong>solo los puertos abiertos</strong>, omite los cerrados y filtrados.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-sSCV</code></td>
+      <td>Combinación de opciones:  <br />• <code class="language-plaintext highlighter-rouge">-sS</code> = Escaneo <strong>SYN</strong> (rápido y sigiloso).  <br />• <code class="language-plaintext highlighter-rouge">-sC</code> = Usa <strong>scripts NSE básicos</strong>, equivalente a <code class="language-plaintext highlighter-rouge">--script=default</code>.  <br />• <code class="language-plaintext highlighter-rouge">-sV</code> = Detecta versiones de servicios.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--min-rate 5000</code></td>
+      <td>Intenta enviar <strong>al menos 5000 paquetes por segundo</strong> (muy rápido). ⚠️ Puede generar falsos positivos si la red no lo soporta bien.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-Pn</code></td>
+      <td>No hace <strong>ping previo</strong> al host (asume que está vivo). Útil si ICMP está bloqueado.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-n</code></td>
+      <td>No resuelve nombres DNS (más rápido).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-v</code></td>
+      <td>Modo <strong>verborreico</strong>: muestra más detalles durante el escaneo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">172.17.0.2</code></td>
+      <td>IP del objetivo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-oN escaneo</code></td>
+      <td>Guarda el resultado en un archivo llamado <code class="language-plaintext highlighter-rouge">escaneo</code> en formato <strong>legible para humanos</strong> (normal output).</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>El escaneo nos muestra que esta maquina tiene 2 puertos abiertos.</p>
+
+<ul>
+  <li>Puerto 22 SSH en la versión <strong>8.9</strong></li>
+  <li>Puerto 80 donde esta corriendo un servicio <strong>Http</strong></li>
+</ul>
+
+<p><img src="image.png" alt="alt text" /></p>
+
+<p>Revisaremos lo que esta corriendo por el puerto 80. Pero antes le asignaremos a la dirección IP <strong>172.17.0.2</strong> un dominio propio llamado <strong>injection.in</strong>  mediante el directorio <code class="language-plaintext highlighter-rouge">etc/hosts</code> para que en vez de poner la IP en el navegador pongamos el dominio asignado actualmente.</p>
+
+<p><img src="image-1.png" alt="alt text" /></p>
+
+<p>Al ingresar al dominio nos mostrara un <strong>Login</strong> donde nos pedirá unas credenciales. Al no disponer de esas credenciales, trataremos de usar credenciales por defecto como <strong>admin, root, 123, etc</strong>.</p>
+
+<p><img src="image-2.png" alt="alt text" /></p>
+
+<p>Sin tener suerte ingresare una ¨ ´ ¨ para ver si nos presenta un error. Efectivamente nos tira un error. Este error es susceptible a <strong>SQL INJECTION</strong>. También como dato <strong>extra</strong> podemos ver que esta usando como base de datos MariaDB.</p>
+
+<p><img src="image-3.png" alt="alt text" /></p>
+
+<h2 id="que-es-una-sql-injection">Que es una SQL INJECTION?</h2>
+
+<p><strong>SQL INJECTION</strong> que en palabras simples es un tipo de ciberataque encubierto en el cual un hacker inserta código propio en un sitio web con el fin de quebrantar las medidas de seguridad y acceder a datos protegidos.</p>
+
+<p>Probaremos en poner en el campo <strong>user</strong> el siguiente comando <code class="language-plaintext highlighter-rouge">'or 1=1 -- -'</code> y en el campo <strong>password</strong> cualquier cosa.</p>
+
+<p><img src="image-4.png" alt="alt text" /></p>
+
+<p>Al entrar nos muestra una ventana con las siguientes credenciales.</p>
+
+<ul>
+  <li>Dylan</li>
+  <li>KJSDFG789FGSDF78</li>
+</ul>
+
+<p><img src="image-5.png" alt="alt text" /></p>
+
+<p>Anteriormente en el escaneo de puertos, teníamos abierto el puerto <strong>22 SSH</strong> lo cual al tener estas credenciales podríamos probar y ver que pasa.
+Pudimos entrar. Ahora trataremos de buscar dentro del sistema cosas que nos puedan llamar la atención.</p>
+
+<p><img src="image-6.png" alt="alt text" /></p>
+
+<p>Al indagar dentro de la maquina victima notamos unos archivos que hacen llamar la atención:</p>
+
+<ul>
+  <li>Acceso_valido_dylan.php</li>
+  <li>Config.php</li>
+  <li>Index.php</li>
+</ul>
+
+<p><img src="image-7.png" alt="alt text" /></p>
+
+<p>Al abrir el archivo <strong>Config.php</strong> nos muestra unas credenciales de una base de datos. Podría ser de la base de datos montada en MariaDB por el error del login</p>
+
+<p><img src="image-8.png" alt="alt text" /></p>
+
+<p>Probaremos las credenciales con el siguiente comando<code class="language-plaintext highlighter-rouge">mysql -uroot -ppaso</code> para entrar a la BD. Tenemos éxito. Ahora trataremos de explorar un poco y ver que se puede encontrar.</p>
+
+<p><img src="image-9.png" alt="alt text" /></p>
+
+<p>Al revisar nos encontramos con las credenciales que ya tenemos de dylan. Nada relevante.</p>
+
+<p><img src="image-10.png" alt="alt text" /></p>
+
+<p>Ahora buscaremos binarios que tengan los permisos SUID con este comando</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>find / -perm -4000 2&gt;/dev/null
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Parte</th>
+      <th>Significado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">find</code></td>
+      <td>Comando para buscar archivos.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">/</code></td>
+      <td>Inicia la búsqueda desde la raíz del sistema (todo el disco).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-perm -4000</code></td>
+      <td>Busca archivos con el <strong>bit SUID</strong> activado.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">2&gt;/dev/null</code></td>
+      <td>Oculta los <strong>mensajes de error</strong> (como “Permiso denegado”).</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>En el siguiente resultado nos interesa <code class="language-plaintext highlighter-rouge">/usr/bin/env</code> ya que esto nos puede dar acceso como <strong>root</strong> en la maquina victima.</p>
+
+<p><img src="image-11.png" alt="alt text" /></p>
+
+<p>Consultando la pagina https://gtfobins.github.io/gtfobins/env/ nos dice la forma de como ganar acceso root con este SUID.</p>
+
+<p>Tenemos que poner el siguiente comando en la terminal  <code class="language-plaintext highlighter-rouge">./env /bin/sh -p</code> para asi ser root y ganar control total de la maquina.</p>
+
+<p><img src="image-12.png" alt="alt text" /></p>
+
+:ET

@@ -1,0 +1,2 @@
+I"�<p>En esta práctica resolveremos una máquina de <strong>DockerLabs</strong> donde identificaremos un <strong>error común en el desarrollo de aplicaciones web</strong>: la inclusión de <strong>comentarios sensibles en el código</strong>. Estos comentarios pueden contener información crítica como <strong>usuarios y contraseñas</strong>, lo que representa una vulnerabilidad grave y fácilmente explotable para comprometer la maquina.</p>
+:ET

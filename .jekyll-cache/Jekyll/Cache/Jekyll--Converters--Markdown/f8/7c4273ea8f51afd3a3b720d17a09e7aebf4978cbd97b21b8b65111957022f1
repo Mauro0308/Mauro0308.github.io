@@ -1,0 +1,138 @@
+I"p<p>Trabajaremos con una máquina de DockerLabs que tiene un servicio <strong>SSH expuesto y vulnerable</strong>. El desafío consiste en <strong>identificar la versión del servicio</strong>, buscar la <strong>vulnerabilidad asociada (CVE)</strong> y explotarla con éxito para <strong>obtener acceso a la máquina víctima</strong>.</p>
+
+<p><img src="image.png" alt="alt text" /></p>
+
+<p>Empezaremos haciendo un escaneo de puertos a la maquina <strong>BreakMySSH</strong> con la herramienta <strong>Nmap</strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code> sudo nmap -p- --open -sSCV --min-rate 5000 -Pn -n -v 172.18.0.2 -oN escaneo
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Parte</th>
+      <th>Significado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sudo</code></td>
+      <td>Se necesita privilegios de administrador para algunos tipos de escaneo (como los de tipo SYN).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nmap</code></td>
+      <td>Herramienta para escaneo de redes y puertos.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-p-</code></td>
+      <td>Escanea <strong>todos los puertos</strong> (del 1 al 65535).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--open</code></td>
+      <td>Muestra <strong>solo los puertos abiertos</strong>, omite los cerrados y filtrados.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-sSCV</code></td>
+      <td>Combinación de opciones:  <br />• <code class="language-plaintext highlighter-rouge">-sS</code> = Escaneo <strong>SYN</strong> (rápido y sigiloso).  <br />• <code class="language-plaintext highlighter-rouge">-sC</code> = Usa <strong>scripts NSE básicos</strong>, equivalente a <code class="language-plaintext highlighter-rouge">--script=default</code>.  <br />• <code class="language-plaintext highlighter-rouge">-sV</code> = Detecta versiones de servicios.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--min-rate 5000</code></td>
+      <td>Intenta enviar <strong>al menos 5000 paquetes por segundo</strong> (muy rápido). ⚠️ Puede generar falsos positivos si la red no lo soporta bien.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-Pn</code></td>
+      <td>No hace <strong>ping previo</strong> al host (asume que está vivo). Útil si ICMP está bloqueado.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-n</code></td>
+      <td>No resuelve nombres DNS (más rápido).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-v</code></td>
+      <td>Modo <strong>verborreico</strong>: muestra más detalles durante el escaneo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">172.18.0.2</code></td>
+      <td>IP del objetivo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-oN escaneo</code></td>
+      <td>Guarda el resultado en un archivo llamado <code class="language-plaintext highlighter-rouge">escaneo</code> en formato <strong>legible</strong> (normal output).</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>El escaneo nos muestra que esta maquina tiene 1 puerto abierto.</p>
+
+<ul>
+  <li>Puerto 22 SSH en la versión <strong>7.7</strong></li>
+</ul>
+
+<p><img src="image-1.png" alt="alt text" /></p>
+
+<p>Buscaremos el CVE de esta vulnerabilidad para ver como poder explotarla. 
+Luego de investigar esta vulnerabilidad, tiene como nombre <strong>CVE-2018-15473</strong> donde nos dice que es vulnerable a <strong>enumeración de usuarios</strong>.</p>
+
+<p>Tendremos que buscar una herramienta para poder hacer esa enumeración y poder tener la lista de los posibles usuarios de la maquina victima.</p>
+
+<p>Usaremos la herramienta <strong>metasploit</strong> para poder hacer la enumeración de usuarios. Podemos ver que si hay una herramienta para esta tarea.</p>
+
+<p><img src="image-2.png" alt="alt text" /></p>
+
+<p>configuraremos el <strong>payload</strong> con los parámetros que nos piden. Luego de eso lo echaremos a correr.</p>
+
+<p><img src="image-3.png" alt="alt text" /></p>
+
+<p>Nos encontró varios usuarios pero usaremos el usuario <strong>root</strong></p>
+
+<p><img src="image-4.png" alt="alt text" /></p>
+
+<p>Ahora que tenemos un usuario, necesitaremos una password para poder entrar por SSH por lo cual usaremos la herramienta <strong>hydra</strong> para poder encontrar la password de este usuario.</p>
+
+<p>Para ello usaremos el siguiente comando con <strong>hydra</strong></p>
+
+<p><code class="language-plaintext highlighter-rouge">hydra -l root -P /usr/share/wordlists/rockyou.txt ssh://172.17.0.2</code></p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Opción</th>
+      <th>Significado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">hydra</code></td>
+      <td>Herramienta de fuerza bruta rápida y flexible, usada para romper contraseñas en servicios remotos.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-l root</code></td>
+      <td>Nombre de <strong>usuario fijo</strong> que se va a probar (<code class="language-plaintext highlighter-rouge">root</code>).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-P /usr/share/wordlists/rockyou.txt</code></td>
+      <td>Ruta al <strong>diccionario de contraseñas</strong>. Se probarán todas esas contraseñas con el usuario <code class="language-plaintext highlighter-rouge">root</code>.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">ssh://172.17.0.2</code></td>
+      <td>Protocolo y <strong>dirección IP del objetivo</strong>, en este caso SSH. Hydra sabrá que debe conectarse al puerto 22 por defecto.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Encontró una password para el usuario root.</p>
+
+<p><img src="image-5.png" alt="alt text" /></p>
+
+<p>Ahora lo que nos quedaría por hacer seria entrar por ssh con estas credenciales que obtuvimos</p>
+
+<ul>
+  <li>user: root</li>
+  <li>password: estrella</li>
+</ul>
+
+<p>Al entrar por ssh con las credenciales pudimos acceder como <strong>root</strong> y apoderarnos de la maquina.</p>
+
+<p><img src="image-6.png" alt="alt text" /></p>
+
+:ET

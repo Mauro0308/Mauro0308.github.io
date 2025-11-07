@@ -1,0 +1,2 @@
+I"�<p>En esta práctica resolveremos una máquina de <strong>DockerLabs</strong> enfocada en la explotación del servicio <strong>SSH (puerto 22)</strong> mediante un ataque de <strong>fuerza bruta</strong>. A lo largo del proceso iremos encontrando distintas <strong>pistas</strong> que nos guiarán hacia la solución, incluyendo la necesidad de <strong>invertir y formatear un diccionario</strong> para utilizarlo de forma efectiva y así lograr vulnerar la máquina.</p>
+:ET

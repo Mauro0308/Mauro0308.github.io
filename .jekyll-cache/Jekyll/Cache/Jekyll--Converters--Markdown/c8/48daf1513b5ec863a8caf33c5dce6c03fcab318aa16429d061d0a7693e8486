@@ -1,0 +1,2 @@
+I".<p>En este laboratorio exploraremos una máquina de DockerLabs con una vulnerabilidad en el puerto 21. Aprovecharemos esta falla para introducir un <strong><em>backdoor</em></strong> y obtener acceso privilegiado como <em>root</em>, empleando una herramienta extraída de un repositorio en GitHub.</p>
+:ET

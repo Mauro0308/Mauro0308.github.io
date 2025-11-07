@@ -1,0 +1,2 @@
+I"R<p>Trabajaremos con una máquina de DockerLabs que tiene un servicio <strong>SSH expuesto y vulnerable</strong>. El desafío consiste en <strong>identificar la versión del servicio</strong>, buscar la <strong>vulnerabilidad asociada (CVE)</strong> y explotarla con éxito para <strong>obtener acceso a la máquina víctima</strong>.</p>
+:ET
