@@ -8,7 +8,7 @@ usemathjax: true
 
 En esta práctica resolveremos una máquina de **DockerLabs** en la que aplicaremos técnicas de **esteganografía** para descubrir **datos ocultos dentro de una imagen**. Dichos datos, presentes en los **metadatos del archivo**, nos proporcionarán la información necesaria para avanzar en el análisis y finalmente **vulnerar la máquina**.
 
-![alt text](\assets\img\image.png)
+![alt text](\assets\img\BorazuwarahCTF-image)
 
 Empezaremos haciendo un escaneo de puertos a la maquina **BorazuwarahCTF** con la herramienta **Nmap**
 
@@ -35,12 +35,12 @@ El escaneo nos muestra que esta maquina tiene 2 puerto abierto.
 * puerto 22 ssh version 9.2
 * puerto 80 http
 
-![alt text](image-1.png)
+![alt text](\assets\img\BorazuwarahCTF-image-1.png)
 
 Revisaremos el puerto 80 para ver que pagina esta corriendo. Sale la imagen de un kinder sorpresa.
 También revise el código fuente de la pagina pero no se encontró nada raro.
 
-![alt text](image-2.png)
+![alt text](\assets\img\BorazuwarahCTF-image-2.png)
 
 Usaremos la herramienta gobuster para hacer fuzzing y ver si se esconde directorios ocultos. Para eso usaremos el siguiente comando:
 
@@ -59,7 +59,7 @@ gobuster dir -u http://172.17.0.2 -w /usr/share/wordlists/dirbuster/directory-li
 
 Tampoco encontramos nada.
 
-![alt text](image-3.png)
+![alt text](\assets\img\BorazuwarahCTF-image-3.png)
 
 Cuando se nos presenta estas situaciones donde lo único que tenemos como pista es una imagen, podemos sacar como conclusión de que esta imagen puede contener **metadatos**
 
@@ -76,7 +76,7 @@ Como se puede ver la imagen si escondía **metadatos** donde nos da lo siguiente
 * User: borazuwarah
 * Password: ----------
 
-![alt text](image-4.png)
+![alt text](\assets\img\BorazuwarahCTF-image-4.png)
 
 Ahora que tenemos un posible usuario, podríamos usar **hydra** para buscar el password de este usuario. Usaremos e siguiente comando:
 
@@ -89,17 +89,17 @@ Encontramos el password de este usuario. Ahora como esta maquina tenia el puerto
 * login: borazuwarah
 * password: 123456
 
-![alt text](image-5.png)
+![alt text](\assets\img\BorazuwarahCTF-image-5.png)
 
 Pudimos entrar sin problemas con las credenciales.
 
-![alt text](image-6.png)
+![alt text](\assets\img\BorazuwarahCTF-image-6.png)
 
 Al realizar el comando `sudo -l` podemos ver que este usuario puede pasar a root usando el truco de /bin/bash. 
 
-![alt text](image-7.png)
+![alt text](\assets\img\BorazuwarahCTF-image-7.png)
 
 Entonces pondremos el siguiente comando: `sudo -u root /bin/bash`. Somos **root**.
 
-![alt text](image-8.png)
+![alt text](\assets\img\BorazuwarahCTF-image-8.png)
 
