@@ -7,7 +7,8 @@ usemathjax: true
 ---
 **En esta máquina, veremos cómo explotar una vulnerabilidad en un servicio de red utilizando una herramienta de escaneo y ataque. Además, demostraremos que esta máquina tiene una vulnerabilidad de gestión de permisos que puede ser explotada para obtener control total sobre el sistema.**
 
-![alt text](image-24.png)
+![alt text](\assets\img\hosting-image.png)
+
 
 -------------------------------------------------------------------------------------------------------------------------
 
@@ -34,18 +35,18 @@ Realizamos un ping a la maquina con IP 192.168.56.103 victima para ver
  si tenemos comunicación. Vemos que tenemos conectividad y además por
  el TTL=128 podemos deducir que el S.O es windows.
 
- ![alt text](image.png)
+ ![alt text](\assets\img\hosting-image11.png)
 
   Ahora usaremos la herramienta **Nmap** para poder ver todos los puertos
  que estén abiertos y también ver los servicios que estén corriendo con
  su versión. Podemos ver varios puertos abiertos.
 
- ![alt text](image-1.png)
+ ![alt text](\assets\img\hosting-image-1)
 
  Empezamos a revisar el **puerto 80** donde hay una pagina corriendo.
  Procedemos a revisar.
 
- ![alt text](image-2.png)
+ ![alt text](\assets\img\hosting-image-2)
 
  Usaremos la herramienta **dirb** para ver si esta pagina tiene directorios
  ocultos. Usaremos el diccionario **big.txt **como configuración inicial ya
@@ -54,11 +55,11 @@ Realizamos un ping a la maquina con IP 192.168.56.103 victima para ver
  Vemos que se encontró varios directorios, reveizaremos el directorio
  **192.168.56.103/speed**
 
- ![alt text](image-3.png)
+ ![alt text](\assets\img\hosting-image-3)
 
   Es una pagina orientado al hosting
 
-  ![alt text](image-4.png)
+  ![alt text](\assets\img\hosting-image-4)
 
   Al revisar mas la pagina podemos ver a los dueños de la empresa speed
  hosting y podemos notar que abajo de la presentación de cada uno sale
@@ -66,7 +67,7 @@ Realizamos un ping a la maquina con IP 192.168.56.103 victima para ver
  posibles usuarios de la maquina victima. Guardaremos estos usuarios en
  un archivo .txt llamado **usuarios.txt**
 
- ![alt text](image-5.png)
+ ![alt text](\assets\img\hosting-image-5)
 
  Anteriormente en el escaneo de **nmap** podíamos ver que estaba el puerto
  **445** abierto por lo cual es el puerto principal utilizado por SMB en
@@ -74,7 +75,7 @@ Realizamos un ping a la maquina con IP 192.168.56.103 victima para ver
 
 Utilizamos la herramienta **netexec** para corroborar esto.
 
-![alt text](image-6.png)
+![alt text](\assets\img\hosting-image-6)
 
  Haremos un ataque de fuerza bruta en el servicio SMB de la maquina
  victima con las credenciales que encontramos en la pagina y así poder
@@ -84,49 +85,49 @@ Utilizamos la herramienta **netexec** para corroborar esto.
  los usuarios encontrados en la pagina y para la password el
  diccionario **rockyou.txt**
 
- ![alt text](image-7.png)
+ ![alt text](\assets\img\hosting-image-7)
 
   Al parecer se encontró una coincidencia del usuario **smith** con password
  **kissme**
 
- ![alt text](image-8.png)
+ ![alt text](\assets\img\hosting-image-8)
 
  Ahora como se encontró un posible usuario y password validaremos que
  estas credenciales sean correctas.
 
- ![alt text](image-9.png)
+ ![alt text](\assets\img\hosting-image-9)
 
   Ahora veremos si con estas credenciales podemos conectarnos mediante
  **winrm**. Al parecer no se puede.
 
- ![alt text](image-10.png)
+ ![alt text](\assets\img\hosting-image-10)
 
   Ahora enumeraremos con estas credenciales para ver que podemos
  encontrar. Para eso usaremos la herramienta **enum4linux**. Podemos ver
  que hay otro usuario con su password. Usuario **m.davis** pass:
  **H0$T1nG123!**
 
-![alt text](image-11.png)
+![alt text](\assets\img\hosting-image-11)
 
 Probaremos estas credenciales con la herramienta **netexec** usando winrm
  nuevamente. No coinciden
 
- ![alt text](image-12.png)
+ ![alt text](\assets\img\hosting-image-12)
 
   Al probar la pass **H0$T1nG123!** con los distintos usuarios que aparecen
  vemos que hubo una coincidencia con el usuario **j.wilson**
 
- ![alt text](image-13.png)
+ ![alt text](\assets\img\hosting-image-13)
 
   Ahora nos conectaremos con **evil-winrm** con las credenciales nuevas.
  Pudimos lograr la conexion de forma exitosa teniendo una **powershell**
 
- ![alt text](image-14.png)
+ ![alt text](\assets\img\hosting-image-14)
 
   Al investigar un poco los directorios de este usuario, pudimos
  encontrar una **flag**
 
- ![alt text](image-15.png)
+ ![alt text](\assets\img\hosting-image-15)
 
  Ahora trataremos de escalar hasta ser administrador.
  Revisamos que permisos tiene este usuario con el comando **whoami /priv.**
@@ -162,13 +163,13 @@ Probaremos estas credenciales con la herramienta **netexec** usando winrm
  para obtener acceso a cuentas con privilegios elevados, como el
  administrador, y así escalar privilegios dentro del sistema o la red.
 
- ![alt text](image-16.png)
+ ![alt text](\assets\img\hosting-image-16)
 
  El articulo nos dice que nos tenemos que ir al directorio C:\ para
  luego crear una carpeta temporal llamada Temp y posicionarnos dentro
  del directorio recientemente creado.
 
- ![alt text](image-17.png)
+ ![alt text](\assets\img\hosting-image-17)
 
  Ya teniendo los preparativos listos empezamos a explotar este
  privilegio. Ponemos el siguiente comando **reg save hklm\sam c:\Temp\sam.**
@@ -178,30 +179,30 @@ Probaremos estas credenciales con la herramienta **netexec** usando winrm
  Se hace lo mismo con el archivo SYSTEM, que contiene configuraciones
  críticas del registro de Windows.
 
- ![alt text](image-18.png)
+ ![alt text](\assets\img\hosting-image-18)
 
   Ahora descargaremos estos archivos Sam y system a nuestra maquina
  atacante.
 
- ![alt text](image-19.png)
+ ![alt text](\assets\img\hosting-image-19)
 
  Revisamos que se hayan descargado los archivos en nuestra maquina.
 
- ![alt text](image-20.png)
+ ![alt text](\assets\img\hosting-image-20)
 
   Ahora con este comando pypykatz registry --sam sam system extraeremos
  los las password hash de las cuentas de usuario del archivo sam y
  system que previamente hemos descargado de la maquina victima.
 
- ![alt text](image-21.png)
+ ![alt text](\assets\img\hosting-image-21)
 
   Ahora que tenemos el hash de administrador entraremos con evil-winrm a
  la maquina victima. Usaremos el hash de administrator como parámetro
  de la password en evil-winrm. Somos administrador.
 
- ![alt text](image-22.png)
+ ![alt text](\assets\img\hosting-image-22)
 
  Ahora revisamos los directorios para poder encontrar la segunda flag
 
- ![alt text](image-23.png)
+ ![alt text](\assets\img\hosting-image-23)
 
