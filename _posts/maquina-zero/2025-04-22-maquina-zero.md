@@ -5,6 +5,9 @@ date: 2025-04-22 23:00:00 +0700
 categories: jekyll update
 usemathjax: true
 ---
+Explotaremos una máquina vulnerable a EternalBlue (CVE-2017-0144) para detectar SMBv1 inseguro, obtener acceso en un laboratorio y documentar las técnicas de explotación y post-explotación. Solo en entornos autorizados.
+
+![alt text](\assets\img\zero-eternal-blue.png)
 
 Iniciaremos usando la herramienta **netdiscover** para hacer un escaneo a nuestra red y poder identificar la IP de la maquina victima. Identificamos que es la IP **192.168.56.102**
 
@@ -141,14 +144,14 @@ Nmap done: 1 IP address (1 host up) scanned in 0.34 seconds
 ```
 
 Procedemos a usar la herramienta **metasploit** para poder vulnerar la maquina victima.
-![alt text](image.png)
+![alt text](\assets\img\zero-image.png)
 
 Buscamos la vulnerabilidad "eternalblue" con el comando
 **"search eternalblue"**
-![alt text](image-1.png)
+![alt text](\assets\img\zero-image-1.png)
 
 Nos saldrá una lista de exploits. Escogemos el exploit numero 10 que lleva de nombre **"exploit/windows/smb/ms17_010_psexec"** lo seleccionamos con el comando **"use 10"**
-![alt text](image-2.png)
+![alt text](\assets\img\zero-image-2.png)
 
 Este payload afecta el protocolo SMB (Server Message Block) y permite la ejecución remota de código.
 
@@ -167,15 +170,15 @@ Donde se nos pide lo siguiente:
 
 Una vez ya configurado los parámetros podemos lanzar el exploit.
 
-![alt text](image-3.png)
+![alt text](\assets\img\zero-image-3.png)
 
 Ya dentro de la maquina victima empezamos a buscar las 2 flags del examen.
 Navegando entre archivos y directorios encontramos la primera flag en un archivo llamado **root.txt**
 
-![alt text](image-4.png)
+![alt text](\assets\img\zero-image-4.png)
 
 Encontramos la segunda flag en un archivo llamado **user.txt**
 
-![alt text](image-5.png)
+![alt text](\assets\img\zero-image-5.png)
 
 Ya con los objetivos encontrados damos por finalizado la maquina Zero
