@@ -9,7 +9,7 @@ usemathjax: true
 Vamos a resolver una máquina de la plataforma Dockerlabs llamada **"Injection"**. En este laboratorio, exploraremos cómo una **inyección SQL** puede ser utilizada para vulnerar el sistema y, posteriormente, **tomar el control de la máquina**
 
 
-![alt text](image-13.png)
+![alt text](\assets\img\injection-image-13.png)
 
 --------------------------------------------------------------------------------------------------------
 Empezaremos haciendo un escaneo de puertos a la maquina **Injection** con la herramienta **Nmap**
@@ -37,24 +37,23 @@ El escaneo nos muestra que esta maquina tiene 2 puertos abiertos.
 * Puerto 22 SSH en la versión **8.9**
 * Puerto 80 donde esta corriendo un servicio **Http**
 
-![alt text](image.png)
+![alt text](\assets\img\injection-image.png)
 
 
 Revisaremos lo que esta corriendo por el puerto 80. Pero antes le asignaremos a la dirección IP **172.17.0.2** un dominio propio llamado **injection.in**  mediante el directorio `etc/hosts` para que en vez de poner la IP en el navegador pongamos el dominio asignado actualmente.
 
-![alt text](image-1.png)
+![alt text](\assets\img\injection-image-1.png)
 
 
 Al ingresar al dominio nos mostrara un **Login** donde nos pedirá unas credenciales. Al no disponer de esas credenciales, trataremos de usar credenciales por defecto como **admin, root, 123, etc**. 
 
 
-![alt text](image-2.png)
-
+![alt text](\assets\img\injection-image-2.png)
 
 Sin tener suerte ingresare una ¨ ´ ¨ para ver si nos presenta un error. Efectivamente nos tira un error. Este error es susceptible a **SQL INJECTION**. También como dato **extra** podemos ver que esta usando como base de datos MariaDB.
 
 
-![alt text](image-3.png)
+![alt text](\assets\img\injection-image-3.png)
 
 
 ## Que es una SQL INJECTION?
@@ -63,7 +62,7 @@ Sin tener suerte ingresare una ¨ ´ ¨ para ver si nos presenta un error. Efect
 
 Probaremos en poner en el campo **user** el siguiente comando `'or 1=1 -- -'` y en el campo **password** cualquier cosa.
 
-![alt text](image-4.png)
+![alt text](\assets\img\injection-image-4.png)
 
 Al entrar nos muestra una ventana con las siguientes credenciales.
 
@@ -71,14 +70,14 @@ Al entrar nos muestra una ventana con las siguientes credenciales.
 * KJSDFG789FGSDF78
 
 
-![alt text](image-5.png)
+![alt text](\assets\img\injection-image-5.png)
 
 
 Anteriormente en el escaneo de puertos, teníamos abierto el puerto **22 SSH** lo cual al tener estas credenciales podríamos probar y ver que pasa.
 Pudimos entrar. Ahora trataremos de buscar dentro del sistema cosas que nos puedan llamar la atención. 
 
 
-![alt text](image-6.png)
+![alt text](\assets\img\injection-image-6.png)
 
 
 Al indagar dentro de la maquina victima notamos unos archivos que hacen llamar la atención:
@@ -88,25 +87,25 @@ Al indagar dentro de la maquina victima notamos unos archivos que hacen llamar l
 * Index.php
 
 
-![alt text](image-7.png)
+![alt text](\assets\img\injection-image-7.png)
 
 
 Al abrir el archivo **Config.php** nos muestra unas credenciales de una base de datos. Podría ser de la base de datos montada en MariaDB por el error del login
 
 
-![alt text](image-8.png)
+![alt text](\assets\img\injection-image-8.png)
 
 
 Probaremos las credenciales con el siguiente comando`mysql -uroot -ppaso` para entrar a la BD. Tenemos éxito. Ahora trataremos de explorar un poco y ver que se puede encontrar.
 
 
-![alt text](image-9.png)
+![alt text](\assets\img\injection-image-9.png)
 
 
 Al revisar nos encontramos con las credenciales que ya tenemos de dylan. Nada relevante.
 
 
-![alt text](image-10.png)
+![alt text](\assets\img\injection-image-10.png)
 
 
 Ahora buscaremos binarios que tengan los permisos SUID con este comando 
@@ -124,7 +123,7 @@ find / -perm -4000 2>/dev/null
 En el siguiente resultado nos interesa `/usr/bin/env` ya que esto nos puede dar acceso como **root** en la maquina victima. 
 
 
-![alt text](image-11.png)
+![alt text](\assets\img\injection-image-11.png)
 
 
 Consultando la pagina https://gtfobins.github.io/gtfobins/env/ nos dice la forma de como ganar acceso root con este SUID.
@@ -132,7 +131,7 @@ Consultando la pagina https://gtfobins.github.io/gtfobins/env/ nos dice la forma
 Tenemos que poner el siguiente comando en la terminal  `./env /bin/sh -p` para asi ser root y ganar control total de la maquina.
 
 
-![alt text](image-12.png)
+![alt text](\assets\img\injection-image-12.png)
 
 
 
