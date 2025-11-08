@@ -8,7 +8,7 @@ usemathjax: true
 
 Trabajaremos con una máquina de DockerLabs que tiene un servicio **SSH expuesto y vulnerable**. El desafío consiste en **identificar la versión del servicio**, buscar la **vulnerabilidad asociada (CVE)** y explotarla con éxito para **obtener acceso a la máquina víctima**.
 
-![alt text](image.png)
+![alt text](\assets\img\BreakMySsh-image.png)
 
 Empezaremos haciendo un escaneo de puertos a la maquina **BreakMySSH** con la herramienta **Nmap**
 
@@ -34,7 +34,7 @@ El escaneo nos muestra que esta maquina tiene 1 puerto abierto.
 
 * Puerto 22 SSH en la versión **7.7**
 
-![alt text](image-1.png)
+![alt text](\assets\img\BreakMySsh-image-1.png)
 
 Buscaremos el CVE de esta vulnerabilidad para ver como poder explotarla. 
 Luego de investigar esta vulnerabilidad, tiene como nombre **CVE-2018-15473** donde nos dice que es vulnerable a **enumeración de usuarios**.
@@ -43,15 +43,15 @@ Tendremos que buscar una herramienta para poder hacer esa enumeración y poder t
 
 Usaremos la herramienta **metasploit** para poder hacer la enumeración de usuarios. Podemos ver que si hay una herramienta para esta tarea.
 
-![alt text](image-2.png)
+![alt text](\assets\img\BreakMySsh-image-2.png)
 
 configuraremos el **payload** con los parámetros que nos piden. Luego de eso lo echaremos a correr.
 
-![alt text](image-3.png)
+![alt text](\assets\img\BreakMySsh-image-3.png)
 
 Nos encontró varios usuarios pero usaremos el usuario **root**
 
-![alt text](image-4.png)
+![alt text](\assets\img\BreakMySsh-image-4.png)
 
 Ahora que tenemos un usuario, necesitaremos una password para poder entrar por SSH por lo cual usaremos la herramienta **hydra** para poder encontrar la password de este usuario.
 
@@ -68,7 +68,7 @@ Para ello usaremos el siguiente comando con **hydra**
 
 Encontró una password para el usuario root.
 
-![alt text](image-5.png)
+![alt text](\assets\img\BreakMySsh-image-5.png)
 
 Ahora lo que nos quedaría por hacer seria entrar por ssh con estas credenciales que obtuvimos 
 
@@ -77,6 +77,6 @@ Ahora lo que nos quedaría por hacer seria entrar por ssh con estas credenciales
 
 Al entrar por ssh con las credenciales pudimos acceder como **root** y apoderarnos de la maquina.
 
-![alt text](image-6.png)
+![alt text](\assets\img\BreakMySsh-image-6.png)
 
 
