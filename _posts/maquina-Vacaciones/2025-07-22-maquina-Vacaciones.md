@@ -8,7 +8,7 @@ usemathjax: true
 
 En esta práctica resolveremos una máquina de **DockerLabs** donde identificaremos un **error común en el desarrollo de aplicaciones web**: la inclusión de **comentarios sensibles en el código**. Estos comentarios pueden contener información crítica como **usuarios y contraseñas**, lo que representa una vulnerabilidad grave y fácilmente explotable para comprometer la maquina.
 
-![alt text](image.png)
+![alt text](\assets\img\vacaciones-image.png)
 
 Empezaremos haciendo un escaneo de puertos a la maquina **Vacaciones** con la herramienta **Nmap**
 
@@ -35,15 +35,15 @@ El escaneo nos muestra que esta maquina tiene 2 puerto abierto.
 * puerto 22 ssh version 7.6
 * puerto 80 http
 
-![alt text](image-1.png)
+![alt text](\assets\img\vacaciones-image-1.png)
 
 Revisaremos que servicio http esta corriendo por el puerto 80. Es una pagina en blanco, pero al revisar el código fuente se puede ver un comentario.
 
-![alt text](image-2.png)
+![alt text](\assets\img\vacaciones-image-2.png)
 
 Podrían ser 2 posibles usuarios **Juan** y **Camilo**
 
-![alt text](image-3.png)
+![alt text](\assets\img\vacaciones-image-3.png)
 
 Usare la herramienta **gobuster** para hacer un fuzzing en la pagina y ver si este tiene directorios ocultos. Usare el siguiente comando:
 
@@ -51,7 +51,7 @@ Usare la herramienta **gobuster** para hacer un fuzzing en la pagina y ver si es
 
 No se encontró mucho aparte de la clásica **server-status** se encontró otro directorio llamado **javascript** con el código de estado **301** que en pocas palabras quiere decir que el contenido de ese directorio fue movido. 
 
-![alt text](image-4.png)
+![alt text](\assets\img\vacaciones-image-4.png)
 
 Vamos a usar la herramienta **hydra** para ver si estos 2 usuarios que encontramos tienen credenciales. Para ello usaremos el siguiente comando:
 
@@ -69,19 +69,19 @@ Al probar con el primer usuario **juan** no encontró nada después de dejarlo u
 * **user: camilo**
 * **password: password1**
 
-![alt text](image-5.png)
+![alt text](\assets\img\vacaciones-image-5.png)
 
 Probaremos estas credenciales en el puerto 22 ssh ya que esta abierto. Pudimos tener acceso.
 
-![alt text](image-6.png)
+![alt text](\assets\img\vacaciones-image-6.png)
 
 Probamos el comando `sudo -l` para ver si tenemos acceso a binarios vulnerables, pero nos pide una password, al usar el mismo password de camilo  **"password1"** no nos funciona
 
-![alt text](image-7.png)
+![alt text](\assets\img\vacaciones-image-7.png)
 
 Luego de estar un rato buscando, encontramos un archivo llamado **correo.txt** en el directorio **mail** y tiene sentido ya que el primer mensaje que encontramos nos decía de que juan nos había dejado un correo.
 
-![alt text](image-8.png)
+![alt text](\assets\img\vacaciones-image-8.png)
 
 También existe una forma mas rápida para hacer búsquedas de archivos con el comando:
 
@@ -97,21 +97,21 @@ find / -type f -name "*.txt"
 | `-name "*.txt"` | Filtra por nombre: solo los que **terminan en `.txt`**.                     |
 
 
-![alt text](image-9.png)
+![alt text](\assets\img\vacaciones-image-9.png)
 
 Al abrir el archivo, nos deja unas credenciales.
 
 * **2k84dicb**
 
-![alt text](image-10.png)
+![alt text](\assets\img\vacaciones-image-10.png)
 
 Al tener estas credenciales nuevas, podríamos intentar entrar por ssh con el usuario **juan**. Tenemos exito.
 
-![alt text](image-11.png)
+![alt text](\assets\img\vacaciones-image-11.png)
 
 Al aplicar un `sudo -l` nos dice que podemos obtener privilegios elevados con ruby.
 
-![alt text](image-12.png)
+![alt text](\assets\img\vacaciones-image-12.png)
 
 Consultamos la pagina https://gtfobins.github.io/gtfobins/ruby/#sudo para ver como poder hacerlo. Nos dice que solo tenemos que ejecutar ese comando.
 
@@ -119,9 +119,9 @@ Consultamos la pagina https://gtfobins.github.io/gtfobins/ruby/#sudo para ver co
 sudo ruby -e 'exec "/bin/sh"'
 ```
 
-![alt text](image-13.png)
+![alt text](\assets\img\vacaciones-image-13.png)
 
 Ya con esto logramos ser **root**
 
-![alt text](image-14.png)
+![alt text](\assets\img\vacaciones-image-14.png)
 
