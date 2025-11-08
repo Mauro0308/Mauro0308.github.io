@@ -9,7 +9,7 @@ usemathjax: true
 Vamos a trabajar con una máquina de **Dockerlabs** en la que aprenderemos a utilizar la herramienta **Hydra** para realizar un ataque de **fuerza bruta sobre el servicio SSH**, con el objetivo de **comprometer y tomar control de la máquina víctima**.
 
 
-![alt text](image-2.png)
+![alt text](\assets\img\trust-image-2.png)
 
 ----------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -39,19 +39,19 @@ El escaneo nos muestra que esta maquina tiene 2 puertos abiertos.
 * Puerto 80 donde esta corriendo un servicio **Http**
 
 
-![alt text](image-3.png)
+![alt text](\assets\img\trust-image-3.png)
 
 
 Revisaremos inmediatamente la pagina que esta corriendo por el puerto 80 sin antes asignarle un dominio local para mayor comodidad. Este dominio se llamara **victima.in** 
 
 
-![alt text](image-4.png)
+![alt text](\assets\img\trust-image-4.png)
 
 
 Al revisar la pagina vemos la clásica pagina de apache. Nada fuera de lo normal. También inspeccionemos el código fuente de la pagina no logramos hallar nada interesante.
 
 
-![alt text](image-5.png)
+![alt text](\assets\img\trust-image-5.png)
 
 
 Usare la herramienta **Gobuster** para hacer **fuzzing** para tratar de buscar directorios ocultos en la pagina. Para esto usare el siguiente comando: 
@@ -68,7 +68,7 @@ Usare la herramienta **Gobuster** para hacer **fuzzing** para tratar de buscar d
 No se encontró nada interesante, solo la típica pagina de **server status**. Dado esto usaremos el mismo comando pero con la diferencia que le vamos a especificar los archivos de interés que quiero que se centre en buscar
 
 
-![alt text](image-6.png)
+![alt text](\assets\img\trust-image-6.png)
 
 
 Usaremos el comando:
@@ -84,13 +84,13 @@ Lo único que se agrego fue `-x php,txt,sh` para que se centre en buscar archivo
 Ahora encontró muchos mas directorios ocultos entre los cuales llama uno poderosamente la atención que es **secret.php** 
 
 
-![alt text](image-7.png)
+![alt text](\assets\img\trust-image-7.png)
 
 
 Al entrar al directorio **secret.php** nos muestra la siguiente pagina, donde podríamos tener un posible usuario llamado **Mario**.
 
 
-![alt text](image-8.png)
+![alt text](\assets\img\trust-image-8.png)
 
 
 En el escaneo de **Nmap** se había visto que estaba abierto el puerto **22 SSH**. Lo que se podría hacer de aquí en adelante seria hacer **fuerza bruta** con la herramienta hydra, ya que  tendríamos un posible usuario llamado **Mario**.
@@ -123,7 +123,7 @@ Usaremos la herramienta hydra para hacer fuerza bruta mediante el **puerto 22 SS
 Se encontró una posible contraseña **chocolate** que pertenece al usuario **mario**
 
 
-![alt text](image-9.png)
+![alt text](\assets\img\trust-image-9.png)
 
 
 Ahora que tenemos un usuario y una contraseña probaremos mediante el puerto de conexión 22 SSH estas credenciales.
@@ -131,7 +131,7 @@ Ahora que tenemos un usuario y una contraseña probaremos mediante el puerto de 
 Estamos dentro de la maquina como el usuario **mario**. Ahora revisaremos para ver si existe algo de interés para apoderarnos de la maquina.
 
 
-![alt text](image-10.png)
+![alt text](\assets\img\trust-image-10.png)
 
 
 Probamos el comando `sudo -l` 
@@ -143,7 +143,7 @@ Probamos el comando `sudo -l`
 Podemos ver que el usuario **mario**  puede ejecutar **vim**. 
 
 
-![alt text](image-11.png)
+![alt text](\assets\img\trust-image-11.png)
 
 
 Buscamos en la pagina https://gtfobins.github.io/gtfobins/vim/ y nos dice que con **vim** podemos salir de una shell restringida.
@@ -156,4 +156,4 @@ vim -c ':!/bin/sh'
 somos **root** nos hemos apoderado totalmente de la maquina.
 
 
-![alt text](image-12.png)
+![alt text](\assets\img\trust-image-12.png)
