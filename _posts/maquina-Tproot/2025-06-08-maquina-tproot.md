@@ -8,7 +8,7 @@ usemathjax: true
 
 En esta práctica resolveremos una máquina de DockerLabs en la que analizaremos la vulnerabilidad _CVE-2011-2523_, un _backdoor_ que aprovecharemos utilizando la herramienta _Metasploit_ para explotarla y tomar control de la máquina víctima.
 
-![alt text](image.png)
+![alt text](\assets\img\tproot-image.png)
 
 Empezaremos haciendo un escaneo de puertos a la maquina **Tproot** con la herramienta **Nmap**
 
@@ -36,11 +36,11 @@ El escaneo nos muestra que esta maquina tiene 2 puerto abierto.
 * puerto 80 http
 
 
-![alt text](image-1.png)
+![alt text](\assets\img\tproot-image-1.png)
 
 Revisaremos el puerto 80 para ver que esta corriendo. Es una pagina de apache.
 
-![alt text](image-2.png)
+![alt text](\assets\img\tproot-image-2.png)
 
 Usaremos la herramienta **gobuster** para ver si esta pagina contiene directorios ocultos. Para ello usaremos el siguiente comando:  
 
@@ -48,7 +48,7 @@ Usaremos la herramienta **gobuster** para ver si esta pagina contiene directorio
 
 No encontró nada.
 
-![alt text](image-3.png)
+![alt text](\assets\img\tproot-image-3.png)
 
 Entonces trabajaremos con el puerto 21 aprovechando su vulnerabilidad **CVE - 2011-2523** de un ataque de **backdoor**. Para ello usaremos la herramienta **metasploit**
 
@@ -75,20 +75,20 @@ Entonces trabajaremos con el puerto 21 aprovechando su vulnerabilidad **CVE - 20
 
 Dicho esto usamos el siguiente comando para abrir metasploit `msfconsole`. Luego escribimos el siguiente comando: `search vsftpd 2.3.4` lo cual nos buscara un exploit que sea para explotar esta vulnerabilidad. En este caso nos encontró un exploit para realizar un **backdoor**.
 
-![alt text](image-4.png)
+![alt text](\assets\img\tproot-image-4.png)
 
 Escribimos el siguiente comando `use 0` para poder hacer uso del exploit. Luego se nos cargara el exploit para poder empezar a configurar el **payload** para ello ponemos el comando `options` para que nos muestre que tenemos que configurar para hacer funcionar el exploit. En este caso solo nos pide configurar el **RHOSTS** para poder hacerlo funcionar. 
 
-![alt text](image-5.png)
+![alt text](\assets\img\tproot-image-5.png)
 
 Para configurar el RHOSTS pondremos el siguiente comando: `set rhosts 172.17.0.2` con esto tendremos listo la configuración del exploit.
 
-![alt text](image-6.png)
+![alt text](\assets\img\tproot-image-6.png)
 
 Para hacerlo correr solo debemos poner el comando **exploit** y esperar a que termine de cargar el exploit. Una vez terminado veremos que ya somos **root** dentro de la maquina victima.
 
-![alt text](image-7.png)
+![alt text](\assets\img\tproot-image-7.png)
 
 CTF?? jaja
 
-![alt text](image-8.png)
+![alt text](\assets\img\tproot-image-8.png)
