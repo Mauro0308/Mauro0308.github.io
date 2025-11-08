@@ -8,7 +8,7 @@ usemathjax: true
 
 En esta práctica resolveremos una máquina de **DockerLabs** en la que aplicaremos técnicas de **esteganografía** para descubrir **datos ocultos dentro de una imagen**. Dichos datos, presentes en los **metadatos del archivo**, nos proporcionarán la información necesaria para avanzar en el análisis y finalmente **vulnerar la máquina**.
 
-![alt text](\assets\img\BorazuwarahCTF-image)
+![alt text](\assets\img\BorazuwarahCTF-image.png)
 
 Empezaremos haciendo un escaneo de puertos a la maquina **BorazuwarahCTF** con la herramienta **Nmap**
 
