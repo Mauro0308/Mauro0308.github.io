@@ -8,7 +8,8 @@ usemathjax: true
 
 En este laboratorio exploraremos una máquina de DockerLabs con una vulnerabilidad en el puerto 21. Aprovecharemos esta falla para introducir un **_backdoor_** y obtener acceso privilegiado como _root_, empleando una herramienta extraída de un repositorio en GitHub.
 
-![alt text](image.png)
+![alt text](\assets\img\FirstHacking-image.png)
+
 
 Empezaremos haciendo un escaneo de puertos a la maquina **FirstHacking** con la herramienta **Nmap**
 
@@ -34,7 +35,7 @@ El escaneo nos muestra que esta maquina tiene 1 puerto abierto.
 
 * puerto 21 FTP **vsftpd 2.3.4**
 
-![alt text](image-1.png)
+![alt text](\assets\img\FirstHacking-image-1.png)
 
 El puerto FTP 21 es el puerto estándar de control y comando para el Protocolo de Transferencia de Archivos (FTP). Se utiliza para establecer la conexión entre un cliente FTP y un servidor FTP. El puerto 20, por otro lado, se utiliza para la transferencia de datos. 
 
@@ -69,11 +70,11 @@ Un **backdoor** es una forma de obtener acceso oculto o no autorizado a un siste
 
 Descargaremos este repositorio de github donde contiene el exploit para vulnerar el sistema.
 
-![alt text](image-2.png)
+![alt text](\assets\img\FirstHacking-image-2.png)
 
 Uno de los requerimientos para usar este exploit es instalar **pwntools**. Pwntools es una librería de Python muy usada para escribir exploits. El problema es que se instala con pip lo cual esto kali linux no deja hacerlo.
 
-![alt text](image-3.png)
+![alt text](\assets\img\FirstHacking-image-3.png)
 
 Recomiendo crear un entorno virtual con Python para instalar la librería
 
@@ -106,7 +107,7 @@ python3 exploit.py 172.17.0.2 21
 
 Ya ejecutado veremos que somos **root** en la maquina victima.
 
-![alt text](image-4.png)
+![alt text](\assets\img\FirstHacking-image-4.png)
 
 PD: para desactivar el entorno virtual de Python usar este comando:
 
