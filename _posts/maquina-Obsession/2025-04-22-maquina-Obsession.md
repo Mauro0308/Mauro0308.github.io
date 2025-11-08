@@ -8,7 +8,7 @@ usemathjax: true
 
 En esta práctica trabajaremos con una máquina de DockerLabs donde aprovecharemos el servicio FTP abierto en el puerto 21 para acceder a la cuenta _anonymous_. Desde allí descargaremos documentos y archivos sensibles que nos proporcionarán pistas relevantes para avanzar en la explotación y vulneración de la máquina.
 
-![alt text](image-1.png)
+![alt text](\assets\img\Obsession-image-1.png)
 
 Empezaremos haciendo un escaneo de puertos a la maquina **Obsession** con la herramienta **Nmap**
 
@@ -36,11 +36,11 @@ El escaneo nos muestra que esta maquina tiene 3 puertos abiertos.
 * Puerto 22 SSH en la versión **9.6** 
 * Puerto 80 donde esta corriendo un servicio **Http**
 
-![alt text](image.png)
+![alt text](\assets\img\Obsession-image.png)
 
 Podemos observar que el puerto 21 tiene el login de anónimo habilitado **FTP code 230** por lo cual podríamos entrar a revisar y ver que nos podemos encontrar. Para ello pondremos el siguiente comando: `ftp 172.17.0.2`, nos pedirá un usuario le ponemos **anonymous** y password lo dejamos en blanco.
 
-![alt text](image-2.png)
+![alt text](\assets\img\Obsession-image-2.png)
 
 Al entrar y hacer el comando `ls` podemos ver que hay 2 archivos.txt.
 
@@ -52,7 +52,7 @@ Descargaremos estos 2 archivos a nuestra maquina atacante con el comando **mget*
 `mget chat-gonza.txt`
 `mget pendientes.txt`
 
-![alt text](image-3.png)
+![alt text](\assets\img\Obsession-image-3.png)
 
 Puede que algunas personas confundan el comando **mget** con el **wget** pero no son lo  mismo. 
 
@@ -72,21 +72,21 @@ Una vez descargado los archivos, los revisamos. el archivo **chat-gonza.txt** pa
 
 El segundo archivo **pendientes.txt** contiene como una lista de cosas por hacer donde el punto 4 llama la atención donde dice lo siguiente: ***Cambiar algunas configuraciones de mi equipo, creo que tengo ciertos permisos habilitados que no son del todo seguros..***
 
-![alt text](image-4.png)
+![alt text](\assets\img\Obsession-image-4.png)
 
 Revisaremos el puerto 80 para ver que http se esta corriendo por detrás. Al parecer nos encontramos con una pagina de fitness o algo por el estilo.
 
-![alt text](image-5.png)
+![alt text](\assets\img\Obsession-image-5.png)
 
 La pagina contiene un formulario que al llenar los datos te redirige a la siguiente pagina.
 
-![alt text](image-6.png)
+![alt text](\assets\img\Obsession-image-6.png)
 
-![alt text](image-7.png)
+![alt text](\assets\img\Obsession-image-7.png)
 
 Revisando a mas detalle esta pagina tiene un enlace que dice **entrar aquí** que nos lleva a otra pagina.
 
-![alt text](image-8.png)
+![alt text](\assets\img\Obsession-image-8.png)
 
 Al revisar el código fuente de las paginas en una encontramos el siguiente mensaje.
 
@@ -94,7 +94,7 @@ Al revisar el código fuente de las paginas en una encontramos el siguiente mens
 
 Entonces según esta nota el nombre de usuario **Russoski** esta ligado a varios servicios.
 
-![alt text](image-9.png)
+![alt text](\assets\img\Obsession-image-9.png)
 
 Ahora utilizaremos la herramienta **gobuster** para hacer fuzzing y ver si hay directorios ocultos. Para ello usaremos el siguiente comando: 
 
@@ -108,23 +108,23 @@ Encontramos 2 directorios interesantes:
 *  backup
 * important
 
-![alt text](image-10.png)
+![alt text](\assets\img\Obsession-image-10.png)
 
 al revisar el **backup** nos muestra lo siguiente. un menu de apache con una ruta llamada **backup.txt**
 
-![alt text](image-11.png)
+![alt text](\assets\img\Obsession-image-11.png)
 
 Al entrar a la ruta backup nos muestra el siguiente mensaje donde se confirma que el usuario **russoski** es el mismo para todos los servicios.
 
-![alt text](image-12.png)
+![alt text](\assets\img\Obsession-image-12.png)
 
 Al revisar el segundo directorio **important** nos lleva al mismo menu de apache. con una ruta llamada **important.md**
 
-![alt text](image-13.png)
+![alt text](\assets\img\Obsession-image-13.png)
 
 al entrar en la ruta nos muestra el siguiente texto. nada relevante...
 
-![alt text](image-14.png)
+![alt text](\assets\img\Obsession-image-14.png)
 
 Procederemos a usar la herramienta hydra y probar en hacer fuerza bruta con el usuario **russoski** al puerto 22 SSH. Para ello usaremos el siguiente comando:
 
@@ -137,25 +137,25 @@ Se encontro la password que coincide con el usuario.
 * user: russoski
 * password: iloveme
 
-![alt text](image-15.png)
+![alt text](\assets\img\Obsession-image-15.png)
 
 Pudimos acceder a la maquina victima con el usuario russoski
 
-![alt text](image-16.png)
+![alt text](\assets\img\Obsession-image-16.png)
 
 Al realizar un sudo -l podemos ver que podemos hacer una escalada de privilegios con **Vim**
 
-![alt text](image-17.png)
+![alt text](\assets\img\Obsession-image-17.png)
 
 Consultando la pagina https://gtfobins.github.io/gtfobins/vim/#sudo nos da las instrucciones para realizar la escalada de privilegios.
 
-![alt text](image-18.png)
+![alt text](\assets\img\Obsession-image-18.png)
 
 Abrimos vim y ponemos lo el comando que nos sugiere la pagina.
 
-![alt text](image-19.png)
+![alt text](\assets\img\Obsession-image-19.png)
 
 Con esto logramos ser **root** en la maquina victima.
 
-![alt text](image-20.png)
+![alt text](\assets\img\Obsession-image-20.png)
 
