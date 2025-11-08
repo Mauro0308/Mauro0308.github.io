@@ -8,7 +8,7 @@ usemathjax: true
 
 En esta práctica trabajaremos con una máquina de DockerLabs en la que explotaremos una vulnerabilidad de _Local File Inclusion (LFI)_. Gracias a esta falla obtendremos diferentes ventajas que nos permitirán avanzar en el proceso de explotación y, finalmente, apoderarnos de la máquina víctima.
 
-![alt text](image.png)
+![alt text](\assets\img\Psycho-image.png)
 
 Empezaremos haciendo un escaneo de puertos a la maquina **Psycho** con la herramienta **Nmap**
 
@@ -35,19 +35,19 @@ El escaneo nos muestra que esta maquina tiene 2 puerto abierto.
 * puerto 22 ssh version 9.6
 * puerto 80 http
 
-![alt text](image-1.png)
+![alt text](\assets\img\Psycho-image-1.png)
 
 Revisaremos el puerto 80 para ver que pagina esta corriendo por detrás.
 Vemos una pagina sencilla que hace alusión a un CTF . Revisamos el código fuente sin encontrar nada raro. En la pagina sale el nombre de **TLuisillo_o** tanto en el hero como el footer, esto podría ser un posible usuario.
 La pagina tiene 2 botones que no funcionan. uno en el nabvar y otro en el centro de la pagina hero.
 
-![alt text](image-2.png)
+![alt text](\assets\img\Psycho-image-2.png)
 
 También podemos ver que abajo sale un mensaje de error. Esto puede ser que se esta tratando tener acceso a algún archivo mal configurado.
 
-![alt text](image-3.png)
+![alt text](\assets\img\Psycho-image-3.png)
 
-![alt text](image-4.png)
+![alt text](\assets\img\Psycho-image-4.png)
 
 Usaremos la herramienta gobuster para ver si se encuentran directorios ocultos. Para ello usaremos el siguiente comando:
 
@@ -57,15 +57,15 @@ gobuster dir -u http://172.17.0.2 -w /usr/share/wordlists/dirbuster/directory-li
 
 Se encontraron algunos directorios.
 
-![alt text](image-5.png)
+![alt text](\assets\img\Psycho-image-5.png)
 
 Al revisar nos encontramos con un menú de apache donde hay una ruta que lleva a una imagen.
 
-![alt text](image-6.png)
+![alt text](\assets\img\Psycho-image-6.png)
 
 Al parecer es la imagen de fondo de la pagina encontrada en el puerto 80. Revise la imagen con la herramienta **exiftool** para ver si contenía algún dato oculto pero no conseguí nada.
 
-![alt text](image-7.png)
+![alt text](\assets\img\Psycho-image-7.png)
 
 Usare la herramienta **wfuzz** para ver si esta pagina es vulnerable a LFI (Local File Inclusión) ya que anteriormente se encontró en la pagina específicamente en el **footer** un mensaje de **error** por lo cual al parecer este intentando de llamar algún recurso de forma incorrecta. Usaremos el directorio que encontró **index.php** para ver si se trata de un LFI
 Para ello usaremos el siguiente comando: 
@@ -96,7 +96,7 @@ wfuzz -c --hl=62 -w /usr/share/wordlists/seclists/Discovery/Web-Content/director
 | `'http://172.17.0.2/index.php?FUZZ=../../.../etc/passwd'` | URL de prueba, donde `FUZZ` será reemplazado por cada palabra del diccionario |
 
 
-![alt text](image-8.png)
+![alt text](\assets\img\Psycho-image-8.png)
 
 Encontró una coincidencia **secret**. Ahora veremos si funciona. Para ello usaremos la herramienta **curl**. Usaremos el siguiente comando
 
@@ -115,12 +115,12 @@ Este comando está intentando **leer el archivo `/etc/passwd`** del sistema remo
 | `../../../../../../../../../../etc/passwd` | Ruta relativa para intentar salir del directorio actual y alcanzar el archivo sensible del sistema operativo `/etc/passwd`            |
 
 
-![alt text](image-9.png)
+![alt text](\assets\img\Psycho-image-9.png)
 
 Tuvimos éxito. Ahora podemos ver 2 posibles usuarios **vaxei** y **luisillo** que posiblemente el segundo usuario sea el mismo **TLuisillo** de la pagina web.
 Intente usar **hydra** en los 2 usuarios encontrados para ver si encontraba alguna credencial para poder acceder por el puerto 22 ssh pero no se encontró nada.
 
-![alt text](image-10.png)
+![alt text](\assets\img\Psycho-image-10.png)
 
 Otra alternativa que podemos hacer es encontrar los archivos **id_rsa** de los 2 usuarios, aprovechando la vulnerabilidad LFI.
 
@@ -156,11 +156,11 @@ view-source:http://172.17.0.2/index.php?secret=../../../../../../../../../../hom
 
 Tuvimos exito con el usuario **vaxei** 
 
-![alt text](image-11.png)
+![alt text](\assets\img\Psycho-image-11.png)
 
 Ahora queda abrir **nano** pegar esta **id_rsa** y darle permiso 600 para poder entrar por ssh.
 
-![alt text](image-12.png)
+![alt text](\assets\img\Psycho-image-12.png)
 
 Aplicamos el comando `sudo -l` para ver binarios vulnerables. Encontramos que podemos vulnerar con **perl** con el usuario **luisillo**.
 Consultando la pagina https://gtfobins.github.io/gtfobins/perl/#sudo nos da el comando para aprovechar esta vulnerabilidad.
@@ -171,19 +171,19 @@ Lo adaptamos un poco
 sudo -u luisillo perl -e 'exec "/bin/bash"';'
 ````
 
-![alt text](image-13.png)
+![alt text](\assets\img\Psycho-image-13.png)
 
 Hemos entrado al sistema como el usuario **luisillo**.
 
-![alt text](image-14.png)
+![alt text](\assets\img\Psycho-image-14.png)
 
 Aplicamos un `sudo -l` y nos dice que el usuario **luisillo** es capaz de ejecutar como root en python el script **paw.py**
 
-![alt text](image-15.png)
+![alt text](\assets\img\Psycho-image-15.png)
 
 Vamos a la ubicación del archivo y ejecutamos el script. Nos da un error ya que esta intentando ejecutar otro script llamado **subprocess.py** pero este no existe. podríamos crear este script 
 
-![alt text](image-16.png)
+![alt text](\assets\img\Psycho-image-16.png)
 
 Entonces crearemos un archivo llamado subprocess.py en el mismo directorio donde se encuentra el otro script paw.py. Abrimos con nano el script y agregamos lo siguiente.
 
@@ -206,6 +206,6 @@ bash -p
 
 Con esto seremos **root** 
 
-![alt text](image-17.png)
+![alt text](\assets\img\Psycho-image-17.png)
 
 
